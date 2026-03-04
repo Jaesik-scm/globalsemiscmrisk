@@ -2,47 +2,41 @@ import streamlit as st
 import streamlit.components.v1 as components
 import os
 
-# 1. 화면 설정
+# 1. 화면 설정 (와이드 모드)
 st.set_page_config(page_title="SCM 리스크 대시보드", layout="wide")
 
-# 2. 여백 완전 박멸 스타일 (가장 강력한 버전)
+# 2. 여백 및 너비 제한 완전 제거 CSS
 st.markdown("""
     <style>
-    /* 1. 상단 헤더, 메뉴, 푸터 숨기기 */
+    /* 상단 헤더 및 여백 제거 */
     header {visibility: hidden; height: 0px;}
-    footer {visibility: hidden;}
-    #MainMenu {visibility: hidden;}
-
-    /* 2. 메인 컨테이너 여백 제거 (중앙 정렬 해제) */
     .main .block-container {
         padding: 0px !important;
         margin: 0px !important;
         max-width: 100% !important;
         width: 100% !important;
     }
-
-    /* 3. Streamlit 앱 전체 배경 여백 제거 */
-    .stApp {
-        margin-top: -60px; /* 상단 빈 공간 위로 끌어올리기 */
-    }
-
-    /* 4. 아이프레임(index.html) 강제 확장 */
+    /* 아이프레임 자체의 너비를 부모 요소에 꽉 차게 설정 */
     iframe {
-        width: 100vw !important; /* 브라우저 너비 100% */
-        height: 100vh !important; /* 브라우저 높이 100% */
+        width: 100% !important;
+        height: 100vh !important;
         border: none !important;
+    }
+    #root > div:nth-child(1) > div > div > div > div > section > div {
+        padding: 0;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. HTML 출력
+# 3. HTML 출력 (width 매개변수 추가)
 try:
     if os.path.exists("index.html"):
         with open("index.html", "r", encoding="utf-8") as f:
             html_content = f.read()
         
-        # height를 충분히 크게 주거나 100vh에 가깝게 설정
-        components.html(html_content, height=1500, scrolling=True)
+        # width=None이 아니라, 내부적으로 꽉 차게 인식하도록 설정
+        # height는 지도의 세로 비율에 맞춰 1200~1500 사이로 조절하세요.
+        components.html(html_content, height=1200, scrolling=True)
     else:
         st.error("index.html 파일을 찾을 수 없습니다.")
 except Exception as e:
