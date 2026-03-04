@@ -1,3 +1,32 @@
+# 1. 화면 설정 (기존과 동일)
+st.set_page_config(page_title="SCM 리스크 대시보드", layout="wide")
+
+# 2. 상단 여백 및 좌우 여백을 0으로 만드는 마법의 코드 (CSS 추가)
+st.markdown("""
+    <style>
+    .main .block-container {
+        padding-top: 0rem;
+        padding-bottom: 0rem;
+        padding-left: 0rem;
+        padding-right: 0rem;
+    }
+    iframe {
+        width: 100%;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# 3. HTML 출력 부분 수정
+try:
+    with open("index.html", "r", encoding="utf-8") as f:
+        html_content = f.read()
+    
+    # width=None 대신 명시적으로 꽉 채우도록 설정
+    components.html(html_content, height=1200, scrolling=True)
+
+except Exception as e:
+    st.error(f"에러 발생: {e}")
+
 import streamlit as st
 import streamlit.components.v1 as components
 
