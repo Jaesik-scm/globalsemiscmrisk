@@ -166,3 +166,15 @@ if __name__ == "__main__":
         scheduled_fetch()
 
     app.run(debug=True, port=5000, use_reloader=False)
+import streamlit as st
+import streamlit.components.v1 as components
+
+# 1. 같은 위치에 있는 index.html 파일을 읽어옵니다
+with open("index.html", "r", encoding="utf-8") as f:
+    html_code = f.read()
+
+# 2. 그 HTML을 화면에 꽉 차게 보여줍니다
+components.html(html_code, height=1000, scrolling=True)
+
+# 3. 중요: 아래의 Flask 코드들이 실행되지 않도록 여기서 멈춥니다
+st.stop()
