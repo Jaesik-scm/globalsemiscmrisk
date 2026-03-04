@@ -4,3 +4,4 @@ flask-cors
 google-generativeai
 requests
 pandas
+apscheduler
