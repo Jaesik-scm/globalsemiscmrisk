@@ -5,31 +5,32 @@ import os
 # 1. 화면 설정
 st.set_page_config(page_title="SCM 리스크 대시보드", layout="wide")
 
-# 2. 크롬에서 빈틈없이 꽉 채우는 초강력 여백 제거 (이걸로 교체)
+# 2. 여백 완전 박멸 스타일 (가장 강력한 버전)
 st.markdown("""
     <style>
-    /* 1. 스트림릿 기본 헤더, 푸터, 메뉴 완전 삭제 */
+    /* 1. 상단 헤더, 메뉴, 푸터 숨기기 */
     header {visibility: hidden; height: 0px;}
     footer {visibility: hidden;}
     #MainMenu {visibility: hidden;}
 
-    /* 2. 메인 콘텐츠 영역 여백(Padding) 0으로 강제 고정 */
+    /* 2. 메인 컨테이너 여백 제거 (중앙 정렬 해제) */
     .main .block-container {
         padding: 0px !important;
         margin: 0px !important;
         max-width: 100% !important;
+        width: 100% !important;
     }
 
-    /* 3. 상단에 생기는 약 50px의 빈 공간 제거 */
+    /* 3. Streamlit 앱 전체 배경 여백 제거 */
     .stApp {
-        margin-top: -50px;
+        margin-top: -60px; /* 상단 빈 공간 위로 끌어올리기 */
     }
 
-    /* 4. 아이프레임(index.html)을 화면에 꽉 채우기 */
+    /* 4. 아이프레임(index.html) 강제 확장 */
     iframe {
-        width: 100vw !important;
-        height: 100vh !important;
-        border: none;
+        width: 100vw !important; /* 브라우저 너비 100% */
+        height: 100vh !important; /* 브라우저 높이 100% */
+        border: none !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -40,10 +41,10 @@ try:
         with open("index.html", "r", encoding="utf-8") as f:
             html_content = f.read()
         
-        # scrolling=False로 설정하면 브라우저 이중 스크롤을 막아 더 깔끔합니다.
-        components.html(html_content, height=1200, scrolling=True)
+        # height를 충분히 크게 주거나 100vh에 가깝게 설정
+        components.html(html_content, height=1500, scrolling=True)
     else:
-        st.error("index.html 파일을 찾을 수 없습니다")
+        st.error("index.html 파일을 찾을 수 없습니다.")
 except Exception as e:
     st.error(f"에러: {e}")
 
