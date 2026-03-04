@@ -6,3 +6,6 @@ requests
 pandas
 apscheduler
 feedparser
+python-dotenv
+beautifulsoup4
+lxml
