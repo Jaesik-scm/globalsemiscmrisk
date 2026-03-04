@@ -1,182 +1,78 @@
 import streamlit as st
-
-# 1. 웹 브라우저 탭 이름 설정
-st.set_page_config(page_title="SCM 리스크 대시보드", layout="wide")
-
-# 2. 화면에 제목 쓰기
-st.title("📡 글로벌 반도체 SCM 리스크 브리핑")
-st.markdown("---")
-
-# 3. 사이드바 만들기 (옵션)
-st.sidebar.header("설정")
-if st.sidebar.button("뉴스 즉시 업데이트"):
-    st.write("뉴스를 새로 가져오는 중...")
-    # 여기에 아까 보셨던 scheduled_fetch() 함수를 넣으면 작동합니다
-"""
-semiconductor_scm_dashboard / backend / app.py
-Flask 웹 서버 — API + 프론트엔드 정적 서빙 + 스케줄러
-
-의존성:
-    pip install flask flask-cors apscheduler
-
-실행:
-    cd backend
-    python app.py
-    → http://localhost:5000
-"""
-
-import json
-from pathlib import Path
+import pandas as pd
 from datetime import datetime
-
-from flask import Flask, jsonify, send_from_directory, request
-from flask_cors import CORS
-from apscheduler.schedulers.background import BackgroundScheduler
-
 from news_fetcher import (
     fetch_news, save_cache, load_cache,
-    RISK_COLORS, RISK_SEVERITY,
+    RISK_COLORS, RISK_SEVERITY
 )
 
-# ─────────────────────────────────────────────
-app = Flask(
-    __name__,
-    static_folder=str(Path(__file__).parent.parent / "frontend"),
-    static_url_path="",
-)
-CORS(app)
+# 1. 페이지 설정 및 제목
+st.set_page_config(page_title="SCM 리스크 대시보드", layout="wide")
+st.title("📡 글로벌 반도체 SCM 리스크 브리핑")
 
+# 2. 사이드바 - 설정 및 필터
+st.sidebar.header("⚙️ 설정 및 필터")
 
-# ─────────────────────────────────────────────
-# 스케줄러: 1시간마다 자동 수집
-# ─────────────────────────────────────────────
-def scheduled_fetch():
-    print(f"[{datetime.now():%H:%M}] 자동 수집 시작...")
-    try:
-        articles = fetch_news(max_per_feed=5, use_llm=True)
-        save_cache(articles)
-        print(f"[{datetime.now():%H:%M}] 자동 수집 완료 — {len(articles)}건")
-    except Exception as e:
-        print(f"  ⚠ 자동 수집 오류: {e}")
-
-
-scheduler = BackgroundScheduler(timezone="Asia/Seoul")
-scheduler.add_job(scheduled_fetch, "interval", hours=1, id="news_fetch")
-scheduler.start()
-
-
-# ─────────────────────────────────────────────
-# API
-# ─────────────────────────────────────────────
-@app.route("/api/news")
-def api_news():
-    """뉴스 목록 반환.
-    Query params:
-        category  — 카테고리 필터 (예: 관세·무역정책)
-        severity  — 최소 심각도 (1~5)
-        region    — 지역 필터 (taiwan, china, usa, korea, japan, europe, mideast, sea, global)
-    """
-    data     = load_cache()
-    articles = data.get("articles", [])
-
-    cat    = request.args.get("category")
-    sev    = request.args.get("severity")
-    region = request.args.get("region")
-
-    if cat and cat != "전체":
-        articles = [a for a in articles if a.get("category") == cat]
-    if sev:
+if st.sidebar.button("🔄 뉴스 즉시 업데이트"):
+    with st.spinner("최신 뉴스를 가져오는 중..."):
         try:
-            min_sev  = int(sev)
-            articles = [a for a in articles if a.get("severity", 1) >= min_sev]
-        except ValueError:
-            pass
-    if region and region != "global":
-        articles = [a for a in articles if a.get("region") == region]
+            articles = fetch_news(max_per_feed=5, use_llm=True)
+            save_cache(articles)
+            st.sidebar.success(f"업데이트 완료! ({len(articles)}건)")
+            st.rerun()
+        except Exception as e:
+            st.sidebar.error(f"오류 발생: {e}")
 
-    return jsonify({
-        "updated_at": data.get("updated_at", ""),
-        "total":      len(articles),
-        "articles":   articles,
-    })
+# 필터 옵션
+data = load_cache()
+articles = data.get("articles", [])
+updated_at = data.get("updated_at", "기록 없음")
 
+st.sidebar.write(f"**최종 업데이트:** {updated_at}")
 
-@app.route("/api/stats")
-def api_stats():
-    """통계 반환 (KPI·카테고리·심각도·소스·지역 분포)."""
-    data     = load_cache()
-    articles = data.get("articles", [])
+all_categories = ["전체"] + list(RISK_SEVERITY.keys())
+selected_cat = st.sidebar.selectbox("카테고리 필터", all_categories)
 
-    category_count: dict[str, int] = {}
-    severity_dist:  dict[str, int] = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0}
-    source_count:   dict[str, int] = {}
-    region_count:   dict[str, int] = {}
+all_regions = ["global", "taiwan", "china", "usa", "korea", "japan", "europe"]
+selected_region = st.sidebar.selectbox("지역 필터", all_regions)
 
-    for a in articles:
-        cat = a.get("category", "일반")
-        category_count[cat] = category_count.get(cat, 0) + 1
+# 3. 데이터 필터링 로직
+filtered_articles = articles
+if selected_cat != "전체":
+    filtered_articles = [a for a in filtered_articles if a.get("category") == selected_cat]
+if selected_region != "global":
+    filtered_articles = [a for a in filtered_articles if a.get("region") == selected_region]
 
-        sev = str(a.get("severity", 1))
-        severity_dist[sev] = severity_dist.get(sev, 0) + 1
+# 4. 메인 화면 - 통계 요약 (KPI)
+col1, col2, col3 = st.columns(3)
+col1.metric("전체 뉴스", f"{len(articles)}건")
+col2.metric("필터링된 뉴스", f"{len(filtered_articles)}건")
+col3.metric("최고 심각도", f"{max([a.get('severity', 1) for a in filtered_articles] + [1])} / 5")
 
-        src = a.get("source", "Unknown")
-        source_count[src] = source_count.get(src, 0) + 1
+st.markdown("---")
 
-        reg = a.get("region", "global")
-        region_count[reg] = region_count.get(reg, 0) + 1
+# 5. 뉴스 목록 출력
+if not filtered_articles:
+    st.info("해당 조건에 맞는 뉴스가 없습니다.")
+else:
+    for a in filtered_articles:
+        # 심각도에 따른 색상 아이콘 설정
+        severity = a.get("severity", 1)
+        sev_icon = "🔴" if severity >= 4 else "🟡" if severity >= 3 else "🟢"
+        
+        with st.container():
+            col_main, col_side = st.columns([4, 1])
+            
+            with col_main:
+                st.subheader(f"{sev_icon} {a.get('title', '제목 없음')}")
+                st.write(f"**요약:** {a.get('summary', '내용 없음')}")
+                st.write(f"**지역:** {a.get('region', 'N/A').upper()} | **카테고리:** {a.get('category', '일반')}")
+                
+            with col_side:
+                st.write(f"**심각도:** {severity}/5")
+                if a.get('url'):
+                    st.link_button("원문 읽기", a.get('url'))
+            
+            st.divider()
 
-    return jsonify({
-        "updated_at":     data.get("updated_at", ""),
-        "total":          len(articles),
-        "category_count": category_count,
-        "category_colors": RISK_COLORS,
-        "severity_dist":  severity_dist,
-        "source_count":   source_count,
-        "region_count":   region_count,
-    })
-
-
-@app.route("/api/categories")
-def api_categories():
-    """카테고리 목록 + 색상 + 심각도 반환."""
-    return jsonify({
-        "categories": ["전체"] + list(RISK_SEVERITY.keys()),
-        "colors":     RISK_COLORS,
-        "severity":   RISK_SEVERITY,
-    })
-
-
-@app.route("/api/refresh", methods=["POST"])
-def api_refresh():
-    """수동 갱신 트리거."""
-    try:
-        articles = fetch_news(max_per_feed=5, use_llm=True)
-        save_cache(articles)
-        return jsonify({"status": "ok", "count": len(articles)})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-
-# ─────────────────────────────────────────────
-# 프론트엔드 서빙
-# ─────────────────────────────────────────────
-@app.route("/")
-def index():
-    return send_from_directory(app.static_folder, "index.html")
-
-
-# ─────────────────────────────────────────────
-# 진입점
-# ─────────────────────────────────────────────
-# if __name__ == "__main__":
-#     print("=" * 52)
-#     print("  글로벌 반도체 SCM 리스크 브리핑 대시보드")
-#     print("  http://localhost:5000")
-#     print("=" * 52)
-
-#     # 캐시 없으면 시작 시 1회 수집
-#     if not load_cache()["articles"]:
-#         print("[초기화] 뉴스 최초 수집 중...")
-#         scheduled_fetch()
-
-#     app.run(debug=True, port=5000, use_reloader=False)
+# Flask 관련 @app.route 코드들은 Streamlit Cloud에서 필요 없으므로 삭제하거나 무시됩니다.
