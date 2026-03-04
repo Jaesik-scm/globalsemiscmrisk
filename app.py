@@ -1,3 +1,17 @@
+import streamlit as st
+import streamlit.components.v1 as components
+
+# index.html 파일을 읽어서 화면에 뿌려줍니다.
+try:
+    with open("index.html", "r", encoding="utf-8") as f:
+        html_code = f.read()
+    components.html(html_code, height=1200, scrolling=True)
+except Exception as e:
+    st.error(f"index.html 파일을 읽을 수 없습니다: {e}")
+
+# 중요: 여기서 멈춰야 아래에 있는 무한대기 소스까지 내려가지 않습니다.
+st.stop()
+
 """
 semiconductor_scm_dashboard / backend / app.py
 Flask 웹 서버 — API + 프론트엔드 정적 서빙 + 스케줄러
@@ -152,20 +166,33 @@ def index():
 
 
 # ─────────────────────────────────────────────
-# 진입점
+# 진입점 (Streamlit 배포용 수정)
 # ─────────────────────────────────────────────
+import streamlit as st
+import streamlit.components.v1 as components
+
+# 1. 화면 설정
+st.set_page_config(page_title="SCM 리스크 대시보드", layout="wide")
+
+# 2. 기획하신 index.html 파일 읽기
+try:
+    # app.py와 같은 위치에 있는 index.html을 읽습니다.
+    with open("index.html", "r", encoding="utf-8") as f:
+        html_content = f.read()
+    
+    # 3. HTML 화면 출력 (높이는 대시보드 길이에 맞춰 조정 가능)
+    components.html(html_content, height=1200, scrolling=True)
+
+except Exception as e:
+    st.error(f"index.html 파일을 찾을 수 없거나 읽는데 실패했습니다: {e}")
+
+# 4. 중요: Streamlit은 여기서 실행을 멈춰야 합니다.
+# 아래의 app.run()이 실행되면 서버가 무한 루프에 빠집니다.
 if __name__ == "__main__":
-    print("=" * 52)
-    print("  글로벌 반도체 SCM 리스크 브리핑 대시보드")
-    print("  http://localhost:5000")
-    print("=" * 52)
-
-    # 캐시 없으면 시작 시 1회 수집
-    if not load_cache()["articles"]:
-        print("[초기화] 뉴스 최초 수집 중...")
-        scheduled_fetch()
-
-    app.run(debug=True, port=5000, use_reloader=False)
+    # 로컬 테스트용 출력은 남겨두되, 실제 서버 실행(app.run)은 하지 않습니다.
+    print("Streamlit 환경에서 대시보드가 실행 중입니다.")
+    # app.run(debug=True, port=5000, use_reloader=False) # 이 줄은 절대 실행되면 안 됨
+    
 import streamlit as st
 import streamlit.components.v1 as components
 
