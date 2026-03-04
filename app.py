@@ -1,31 +1,42 @@
-# 1. 화면 설정 (기존과 동일)
+import streamlit as st
+import streamlit.components.v1 as components
+import os
+
+# 1. 화면 설정 (반드시 모든 st 함수 중 가장 위에 와야 함)
 st.set_page_config(page_title="SCM 리스크 대시보드", layout="wide")
 
-# 2. 상단 여백 및 좌우 여백을 0으로 만드는 마법의 코드 (CSS 추가)
+# 2. 여백 제거 (지도를 화면에 꽉 채우기 위함)
 st.markdown("""
     <style>
     .main .block-container {
-        padding-top: 0rem;
-        padding-bottom: 0rem;
-        padding-left: 0rem;
-        padding-right: 0rem;
+        padding: 0rem !important;
     }
     iframe {
-        width: 100%;
+        width: 100vw !important;
+        height: 100vh !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. HTML 출력 부분 수정
+# 3. HTML 출력
 try:
-    with open("index.html", "r", encoding="utf-8") as f:
-        html_content = f.read()
-    
-    # width=None 대신 명시적으로 꽉 채우도록 설정
-    components.html(html_content, height=1200, scrolling=True)
+    # 파일이 있는지 먼저 확인 (안전장치)
+    if os.path.exists("index.html"):
+        with open("index.html", "r", encoding="utf-8") as f:
+            html_content = f.read()
+        
+        # 높이를 100vh(화면 꽉 차게) 혹은 고정 숫자로 설정
+        components.html(html_content, height=1200, scrolling=True)
+    else:
+        st.error("index.html 파일을 찾을 수 없습니다. 파일 이름을 확인해 주세요.")
 
 except Exception as e:
     st.error(f"에러 발생: {e}")
+
+# 4. 여기서 실행 중단 (아래의 Flask 코드 실행 방지)
+st.stop()
+
+# --- 이 아래로는 기존 소스가 있어도 상관없습니다 ---
 
 import streamlit as st
 import streamlit.components.v1 as components
