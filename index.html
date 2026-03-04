@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>글로벌 반도체 SCM 리스크 브리핑</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=DM+Mono:wght@400;500&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#04090f;--s0:#060d1a;--s1:#0a1422;--s2:#0f1c2e;--s3:#152236;
+  --b0:#172133;--b1:#1c2c44;--b2:#223455;
+  --t0:#e8f2ff;--t1:#8eb8d8;--t2:#4a6a88;
+  --red:#ff3b5c;--amb:#f59e0b;--blu:#3b82f6;--cyn:#00d4ff;--grn:#10b981;--pur:#8b5cf6;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--t0);font-size:14px;display:flex;flex-direction:column}
+
+/* ══ TOPBAR ══ */
+.topbar{background:rgba(4,9,15,.98);backdrop-filter:blur(24px);border-bottom:1px solid var(--b0);padding:0 24px;height:54px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:100}
+.brand{display:flex;align-items:center}
+.brand-main{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:5px;background:linear-gradient(90deg,#ddeeff,var(--cyn));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.brand-sub{font-size:10px;color:var(--t2);margin-left:16px;letter-spacing:2px;text-transform:uppercase;border-left:1px solid var(--b0);padding-left:16px;-webkit-text-fill-color:var(--t2)}
+.top-right{display:flex;align-items:center}
+.top-stat{display:flex;flex-direction:column;align-items:center;padding:0 14px;border-left:1px solid var(--b0)}
+.top-stat-label{font-size:9px;color:var(--t2);letter-spacing:2px;text-transform:uppercase;margin-bottom:1px}
+.top-stat-val{font-family:'DM Mono',monospace;font-size:20px;font-weight:500;line-height:1}
+.top-clock{font-family:'DM Mono',monospace;font-size:12px;color:var(--cyn);padding:0 14px;border-left:1px solid var(--b0)}
+.top-updated{font-size:10px;color:var(--t2);padding:0 12px;border-left:1px solid var(--b0)}
+.refresh-btn{margin-left:8px;padding:6px 14px;border:1px solid var(--b1);border-radius:6px;background:transparent;color:var(--t1);font-size:11px;cursor:pointer;transition:all .2s;font-family:'DM Mono',monospace}
+.refresh-btn:hover{border-color:var(--cyn);color:var(--cyn)}
+.refresh-btn:disabled{opacity:.3;cursor:not-allowed}
+
+/* ══ TAB NAV ══ */
+.tabnav{background:rgba(4,9,15,.95);border-bottom:1px solid var(--b0);display:flex;align-items:center;padding:0 24px;height:44px;flex-shrink:0;gap:4px;z-index:100}
+.tab{padding:8px 20px;border-radius:6px 6px 0 0;border:1px solid transparent;border-bottom:none;font-size:13px;font-weight:500;cursor:pointer;transition:all .18s;color:var(--t2);background:transparent;position:relative;top:1px}
+.tab:hover{color:var(--t1);background:rgba(255,255,255,.04)}
+.tab.on{color:var(--t0);background:var(--s1);border-color:var(--b0);font-weight:700}
+.tab-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:middle}
+.tab-badge{font-family:'DM Mono',monospace;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:7px;background:var(--s2);color:var(--t2)}
+.tab.on .tab-badge{background:rgba(0,212,255,.12);color:var(--cyn)}
+.tabnav-right{margin-left:auto;display:flex;align-items:center;gap:6px}
+.alert-chip{display:none;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;background:rgba(255,59,92,.12);border:1px solid rgba(255,59,92,.3);cursor:pointer;font-size:11px;color:var(--red);transition:background .15s}
+.alert-chip.show{display:flex}
+.alert-chip:hover{background:rgba(255,59,92,.2)}
+.alert-dot{width:6px;height:6px;border-radius:50%;background:var(--red);animation:apulse 1.4s ease infinite}
+@keyframes apulse{0%{box-shadow:0 0 0 0 rgba(255,59,92,.5)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+
+/* ══ PAGE CONTAINER ══ */
+.pages{flex:1;overflow:hidden;position:relative}
+.page{position:absolute;inset:0;overflow:hidden;display:none;flex-direction:column}
+.page.on{display:flex}
+
+/* ══ PAGE 1 — MAP ══ */
+.p1-layout{flex:1;display:grid;grid-template-columns:1fr 300px;overflow:hidden}
+.map-area{position:relative;overflow:hidden;background:#020810}
+#worldMap{width:100%;height:100%;display:block}
+/* Map controls */
+.map-ctrls{position:absolute;top:12px;right:12px;display:flex;align-items:center;gap:5px;z-index:10}
+.cbtn{display:flex;align-items:center;justify-content:center;width:30px;height:30px;background:rgba(4,9,20,.9);border:1px solid var(--b1);border-radius:6px;cursor:pointer;color:var(--t1);font-size:13px;transition:all .18s;backdrop-filter:blur(8px);user-select:none}
+.cbtn:hover{border-color:var(--cyn);color:var(--cyn);background:rgba(0,212,255,.07)}
+.cbtn.on{border-color:var(--cyn);color:var(--cyn);background:rgba(0,212,255,.12)}
+.clbl{font-family:'DM Mono',monospace;font-size:9px;color:var(--t2);letter-spacing:1px}
+/* Map legend */
+.map-legend{position:absolute;bottom:12px;left:12px;background:rgba(4,9,20,.92);border:1px solid var(--b0);border-radius:8px;padding:9px 14px;backdrop-filter:blur(8px)}
+.leg-title{font-size:10px;color:var(--t2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;font-weight:600}
+.leg-row{display:flex;gap:14px;flex-wrap:wrap}
+.leg-item{display:flex;align-items:center;gap:5px}
+.leg-dot{width:8px;height:8px;border-radius:50%}
+.leg-txt{font-family:'DM Mono',monospace;font-size:10px;color:var(--t1)}
+/* Tour badge */
+.tour-badge{position:absolute;bottom:12px;right:12px;background:rgba(4,9,20,.92);border:1px solid var(--b0);border-radius:7px;padding:5px 12px;font-family:'DM Mono',monospace;font-size:10px;color:var(--t2);backdrop-filter:blur(8px)}
+.tour-badge span{color:var(--cyn)}
+
+/* MAP TOOLTIP */
+.map-tt{
+  position:absolute;
+  background:linear-gradient(150deg,rgba(5,12,28,.97),rgba(8,18,40,.97));
+  border:1px solid rgba(30,50,80,.9);border-radius:12px;
+  padding:16px 20px;pointer-events:none;
+  opacity:0;transition:opacity .3s, left .5s cubic-bezier(.4,0,.2,1), top .5s cubic-bezier(.4,0,.2,1);
+  width:320px;z-index:200;
+  box-shadow:0 20px 56px rgba(0,0,0,.85),0 0 0 1px rgba(0,180,255,.06);
+}
+.map-tt.show{opacity:1}
+.map-tt.auto{border-color:rgba(0,180,255,.28);box-shadow:0 20px 56px rgba(0,0,0,.85),0 0 20px rgba(0,180,255,.1)}
+.tt-hd{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+.tt-col{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.tt-name{font-size:16px;font-weight:700;color:var(--t0)}
+.tt-lv{font-family:'DM Mono',monospace;font-size:10px;padding:2px 8px;border-radius:4px;margin-left:auto;font-weight:600}
+.tt-desc{font-size:12px;color:var(--t1);line-height:1.6;margin-bottom:10px}
+.tt-arts{display:flex;flex-direction:column;gap:7px;border-top:1px solid var(--b0);padding-top:9px;margin-bottom:9px}
+.tt-art{display:flex;align-items:flex-start;gap:7px;cursor:pointer;padding:4px 6px;border-radius:6px;transition:background .15s}
+.tt-art:hover{background:rgba(0,212,255,.08)}
+.tt-art-cat{font-size:10px;font-family:'DM Mono',monospace;padding:2px 6px;border-radius:3px;white-space:nowrap;flex-shrink:0;margin-top:2px;font-weight:500}
+.tt-art-title{font-size:12px;color:var(--t0);line-height:1.45;font-weight:500}
+.tt-foot{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--b0);padding-top:8px}
+.tt-hint{font-size:11px;color:var(--cyn)}
+.tt-prog-wrap{display:flex;align-items:center;gap:5px}
+.tt-pbar{width:48px;height:3px;background:var(--b0);border-radius:3px;overflow:hidden}
+.tt-pfill{height:100%;background:linear-gradient(90deg,var(--cyn),#60efff);border-radius:3px;transition:width .12s linear}
+.tt-pdots{display:flex;gap:3px}
+.tt-pdot{width:5px;height:5px;border-radius:50%;background:var(--b1);transition:all .2s}
+.tt-pdot.on{background:var(--cyn);transform:scale(1.3)}
+
+/* RIGHT BAR CHART */
+.map-sidebar{background:var(--s0);border-left:1px solid var(--b0);display:flex;flex-direction:column;overflow:hidden}
+.sidebar-hd{padding:14px 18px;border-bottom:1px solid var(--b0);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.sidebar-title{font-size:11px;font-weight:700;color:var(--t1);letter-spacing:1.5px;text-transform:uppercase}
+.region-bar-list{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.rb-row{display:flex;align-items:center;gap:10px;cursor:pointer;padding:6px 8px;border-radius:7px;transition:background .15s}
+.rb-row:hover{background:var(--s2)}
+.rb-row.active{background:var(--s3);box-shadow:inset 2px 0 0 var(--cyn)}
+.rb-name{font-size:12px;color:var(--t0);width:68px;flex-shrink:0;font-weight:500}
+.rb-track{flex:1;background:var(--bg);border-radius:3px;height:8px;overflow:hidden}
+.rb-fill{height:100%;border-radius:3px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.rb-cnt{font-family:'DM Mono',monospace;font-size:12px;color:var(--t1);width:24px;text-align:right;flex-shrink:0;font-weight:600}
+.rb-lv{font-family:'DM Mono',monospace;font-size:10px;width:32px;flex-shrink:0;font-weight:600}
+
+/* ══ PAGE 2 — ANALYTICS ══ */
+.p2-layout{flex:1;display:flex;flex-direction:column;padding:16px 20px;gap:12px;overflow:hidden}
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;flex-shrink:0}
+.kpi{background:var(--s0);border:1px solid var(--b0);border-radius:10px;padding:18px 20px;position:relative;overflow:hidden;cursor:pointer;transition:border-color .2s,transform .15s}
+.kpi:hover{transform:translateY(-2px)}
+.kpi.active-filter{border-color:var(--cyn);box-shadow:inset 0 0 0 1px rgba(0,212,255,.1)}
+.kpi-glow{position:absolute;top:-20px;right:-20px;width:90px;height:90px;border-radius:50%;opacity:.1;filter:blur(24px)}
+.kpi.c .kpi-glow{background:var(--red)}.kpi.h .kpi-glow{background:var(--amb)}.kpi.m .kpi-glow{background:var(--blu)}.kpi.t .kpi-glow{background:#64748b}
+.kpi-bar{position:absolute;bottom:0;left:0;right:0;height:2px}
+.kpi.c .kpi-bar{background:linear-gradient(90deg,var(--red),#ff6b85)}.kpi.h .kpi-bar{background:linear-gradient(90deg,var(--amb),#fcd34d)}.kpi.m .kpi-bar{background:linear-gradient(90deg,var(--blu),#60a5fa)}.kpi.t .kpi-bar{background:linear-gradient(90deg,#334155,#475569)}
+.kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.kpi-label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.kpi.c .kpi-label{color:var(--red)}.kpi.h .kpi-label{color:var(--amb)}.kpi.m .kpi-label{color:var(--blu)}.kpi.t .kpi-label{color:var(--t2)}
+.kpi-icon{font-size:17px;opacity:.45}
+.kpi-val{font-family:'DM Mono',monospace;font-size:46px;font-weight:500;line-height:1;margin-bottom:5px;letter-spacing:-2px}
+.kpi.c .kpi-val{color:var(--red);text-shadow:0 0 30px rgba(255,59,92,.3)}.kpi.h .kpi-val{color:var(--amb);text-shadow:0 0 30px rgba(245,158,11,.3)}.kpi.m .kpi-val{color:var(--blu);text-shadow:0 0 30px rgba(59,130,246,.3)}.kpi.t .kpi-val{color:#94a3b8}
+.kpi-desc{font-size:11px;color:var(--t2)}
+.charts-row{flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;overflow:hidden}
+.chart-panel{background:var(--s1);border:1px solid var(--b0);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.cp-hd{padding:11px 16px;border-bottom:1px solid var(--b0);flex-shrink:0}
+.cp-title{font-size:11px;font-weight:700;color:var(--t1);letter-spacing:1.5px;text-transform:uppercase}
+.cp-body{flex:1;padding:14px 16px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.cat-list{display:flex;flex-direction:column;gap:9px;width:100%}
+.cat-row{display:flex;align-items:center;gap:9px}
+.cat-name{font-size:12px;color:var(--t1);width:120px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cat-track{flex:1;background:var(--bg);border-radius:3px;height:6px;overflow:hidden}
+.cat-fill{height:100%;border-radius:3px;transition:width .9s cubic-bezier(.4,0,.2,1)}
+.cat-n{font-family:'DM Mono',monospace;font-size:12px;color:var(--t1);width:20px;text-align:right;flex-shrink:0;font-weight:600}
+
+/* ══ PAGE 3 — NEWS ══ */
+.p3-layout{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.news-filter{display:flex;align-items:center;gap:6px;padding:10px 20px;border-bottom:1px solid var(--b0);background:rgba(6,13,26,.8);flex-shrink:0;flex-wrap:wrap}
+.ftab{padding:5px 13px;border-radius:20px;border:1px solid var(--b0);background:transparent;color:var(--t1);font-size:12px;cursor:pointer;transition:all .15s;font-family:'Noto Sans KR',sans-serif}
+.ftab:hover{border-color:var(--cyn);color:var(--cyn)}
+.ftab.on{background:rgba(29,78,216,.25);border-color:var(--blu);color:#93c5fd}
+.filter-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.sev-label{font-size:11px;color:var(--t2)}
+.sev-sel{font-size:12px;padding:4px 9px;border:1px solid var(--b0);border-radius:5px;background:var(--s1);color:var(--t0);cursor:pointer}
+.region-chip{display:none;align-items:center;gap:7px;padding:4px 12px;background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.2);border-radius:20px;font-size:11px;color:var(--cyn)}
+.region-chip.show{display:flex}
+.region-chip-close{cursor:pointer;opacity:.6;transition:opacity .15s}
+.region-chip-close:hover{opacity:1}
+.news-body{flex:1;overflow-y:auto;padding:0}
+.ncard{padding:16px 20px;border-bottom:1px solid var(--b0);transition:background .15s;border-left:3px solid transparent;cursor:pointer}
+.ncard:hover{background:var(--s2)}
+.ncard.flash{animation:flash .7s ease}
+@keyframes flash{0%,100%{background:transparent}40%{background:rgba(0,212,255,.09)}}
+.ncard-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:7px}
+.ncard-left{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cbadge{font-size:11px;font-family:'DM Mono',monospace;padding:3px 8px;border-radius:4px;white-space:nowrap;cursor:pointer;transition:filter .15s}
+.cbadge:hover{filter:brightness(1.2)}
+.rbadge{font-size:11px;color:var(--cyn);background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);padding:3px 8px;border-radius:4px;white-space:nowrap}
+.sev-pips{display:flex;gap:3px;align-items:center;cursor:pointer}
+.pip{width:6px;height:6px;border-radius:2px;background:var(--b0)}
+.pip.on{background:currentColor}
+.ncard-time{font-size:11px;color:var(--t2);white-space:nowrap;flex-shrink:0}
+.ntitle{font-size:14px;font-weight:700;line-height:1.5;color:var(--t0);margin-bottom:5px}
+.nsummary{font-size:12px;color:var(--t1);line-height:1.7;margin-bottom:8px}
+.nfooter{display:flex;align-items:center;justify-content:space-between}
+.nsource{font-family:'DM Mono',monospace;font-size:11px;color:var(--t2)}
+.edit-cls-btn{font-size:11px;color:var(--t2);border:1px solid var(--b0);padding:3px 8px;border-radius:4px;cursor:pointer;background:transparent;font-family:'DM Mono',monospace;transition:all .15s}
+.edit-cls-btn:hover{border-color:var(--cyn);color:var(--cyn)}
+.orig-link{font-size:11px;color:var(--cyn);text-decoration:none;border:1px solid rgba(0,212,255,.2);padding:3px 10px;border-radius:4px;transition:all .15s;font-family:'DM Mono',monospace}
+.orig-link:hover{background:rgba(0,212,255,.07)}
+.orig-link.dim{opacity:.3;pointer-events:none}
+
+/* ══ NEWS DRAWER (slide panel) ══ */
+.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;opacity:0;pointer-events:none;transition:opacity .3s}
+.drawer-overlay.show{opacity:1;pointer-events:all}
+.drawer{position:fixed;right:0;top:0;bottom:0;width:480px;background:var(--s1);border-left:1px solid var(--b1);z-index:501;transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden}
+.drawer.show{transform:translateX(0)}
+.drawer-hd{padding:16px 20px;border-bottom:1px solid var(--b0);display:flex;align-items:center;gap:12px;flex-shrink:0}
+.drawer-title{font-size:15px;font-weight:700;color:var(--t0);flex:1}
+.drawer-badge{font-family:'DM Mono',monospace;font-size:11px;padding:3px 9px;border-radius:4px}
+.drawer-close{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--b1);border-radius:6px;cursor:pointer;color:var(--t2);font-size:18px;transition:all .15s;flex-shrink:0}
+.drawer-close:hover{border-color:var(--cyn);color:var(--cyn)}
+.drawer-body{flex:1;overflow-y:auto}
+.drawer-card{padding:14px 20px;border-bottom:1px solid var(--b0);cursor:pointer;transition:background .15s}
+.drawer-card:hover{background:var(--s2)}
+.dc-top{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.dc-cat{font-size:10px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:3px;white-space:nowrap;font-weight:500}
+.dc-sev{display:flex;gap:2px;align-items:center}
+.dc-pip{width:5px;height:5px;border-radius:1px;background:var(--b0)}
+.dc-pip.on{background:currentColor}
+.dc-time{font-size:10px;color:var(--t2);margin-left:auto}
+.dc-title{font-size:13px;font-weight:600;color:var(--t0);line-height:1.45;margin-bottom:4px}
+.dc-summary{font-size:11px;color:var(--t1);line-height:1.6}
+
+/* ══ NEWS DETAIL MODAL ══ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:600;opacity:0;pointer-events:none;transition:opacity .25s;display:flex;align-items:center;justify-content:center;padding:24px}
+.modal-overlay.show{opacity:1;pointer-events:all}
+.modal{background:var(--s1);border:1px solid var(--b1);border-radius:14px;width:100%;max-width:680px;max-height:80vh;overflow:hidden;display:flex;flex-direction:column;transform:translateY(12px) scale(.97);transition:transform .25s;box-shadow:0 30px 80px rgba(0,0,0,.7)}
+.modal-overlay.show .modal{transform:none}
+.modal-hd{padding:20px 24px;border-bottom:1px solid var(--b0);display:flex;align-items:flex-start;gap:12px;flex-shrink:0}
+.modal-badges{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.modal-title{font-size:18px;font-weight:700;color:var(--t0);line-height:1.5;flex:1}
+.modal-close{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--b1);border-radius:7px;cursor:pointer;color:var(--t2);font-size:20px;flex-shrink:0;transition:all .15s;margin-left:auto}
+.modal-close:hover{border-color:var(--cyn);color:var(--cyn)}
+.modal-body{flex:1;overflow-y:auto;padding:20px 24px}
+.modal-meta{display:flex;gap:16px;margin-bottom:16px;font-size:12px;color:var(--t2)}
+.modal-meta span{display:flex;align-items:center;gap:5px}
+.modal-summary{font-size:14px;color:var(--t1);line-height:1.8;margin-bottom:20px;padding:14px 16px;background:rgba(0,0,0,.2);border-radius:8px;border-left:3px solid var(--cyn)}
+.modal-impact-hd{font-size:11px;font-weight:700;color:var(--t2);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px}
+.modal-impact{font-size:13px;color:var(--t1);line-height:1.75;margin-bottom:20px}
+.modal-footer{display:flex;gap:10px;padding-top:16px;border-top:1px solid var(--b0)}
+.modal-link{padding:10px 20px;border-radius:7px;border:1px solid var(--cyn);background:rgba(0,212,255,.08);color:var(--cyn);font-size:13px;cursor:pointer;font-family:'DM Mono',monospace;transition:all .15s;text-decoration:none;display:inline-flex;align-items:center;gap:7px}
+.modal-link:hover{background:rgba(0,212,255,.16)}
+.modal-edit-btn{padding:10px 20px;border-radius:7px;border:1px solid var(--b1);background:transparent;color:var(--t1);font-size:13px;cursor:pointer;font-family:'DM Mono',monospace;transition:all .15s}
+.modal-edit-btn:hover{border-color:var(--pur);color:var(--pur)}
+
+/* ══ CLS POPUP ══ */
+.cls-popup{position:fixed;background:var(--s2);border:1px solid var(--b2);border-radius:10px;padding:16px 18px;z-index:700;box-shadow:0 16px 50px rgba(0,0,0,.7);width:300px;animation:popIn .18s ease}
+@keyframes popIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.cls-popup-hd{font-size:13px;font-weight:700;color:var(--t0);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.cls-popup-close{cursor:pointer;color:var(--t2);font-size:18px;line-height:1;transition:color .15s}
+.cls-popup-close:hover{color:var(--t0)}
+.cls-field{margin-bottom:10px}
+.cls-label{font-size:11px;color:var(--t2);margin-bottom:4px;font-weight:600}
+.cls-sel{width:100%;font-size:12px;padding:6px 9px;border:1px solid var(--b1);border-radius:6px;background:var(--s0);color:var(--t0);cursor:pointer}
+.cls-sev-btns{display:flex;gap:5px}
+.cls-sev-btn{flex:1;padding:6px 4px;border-radius:5px;border:1px solid var(--b1);background:var(--s0);color:var(--t1);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;text-align:center;transition:all .15s}
+.cls-sev-btn.sel{font-weight:700;border-color:currentColor;background:rgba(255,255,255,.06)}
+.cls-popup-footer{display:flex;gap:7px;margin-top:12px}
+.cls-save{flex:1;padding:8px;border-radius:6px;border:1px solid var(--cyn);background:rgba(0,212,255,.08);color:var(--cyn);font-size:12px;cursor:pointer;font-weight:600;font-family:'DM Mono',monospace;transition:all .15s}
+.cls-save:hover{background:rgba(0,212,255,.16)}
+.cls-ai{flex:1;padding:8px;border-radius:6px;border:1px solid var(--pur);background:rgba(139,92,246,.08);color:var(--pur);font-size:12px;cursor:pointer;font-weight:600;font-family:'DM Mono',monospace;transition:all .15s}
+.cls-ai:hover{background:rgba(139,92,246,.16)}
+.cls-ai-st{font-size:10px;color:var(--t2);margin-top:7px;text-align:center;min-height:14px}
+
+/* ══ MISC ══ */
+.empty{padding:36px;text-align:center;color:var(--t2);font-size:13px}
+.ldot{display:inline-block;animation:blink 1.2s infinite}
+@keyframes blink{0%,100%{opacity:.2}50%{opacity:1}}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--s2);border:1px solid var(--b1);border-radius:8px;color:var(--t0);padding:10px 16px;font-size:12px;opacity:0;transform:translateY(6px);transition:all .3s;pointer-events:none;z-index:999;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.toast.show{opacity:1;transform:translateY(0)}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--b1);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-main">GLOBAL SEMI SCM RISK</span>
+    <span class="brand-sub">글로벌 반도체 공급망 리스크 브리핑</span>
+  </div>
+  <div class="top-right">
+    <div class="top-stat"><span class="top-stat-label">Critical</span><span class="top-stat-val" id="topC" style="color:var(--red)">—</span></div>
+    <div class="top-stat"><span class="top-stat-label">High</span><span class="top-stat-val" id="topH" style="color:var(--amb)">—</span></div>
+    <div class="top-stat"><span class="top-stat-label">Total</span><span class="top-stat-val" id="topT" style="color:var(--t1)">—</span></div>
+    <span class="top-clock" id="clock">—</span>
+    <span class="top-updated" id="lastUpdated">—</span>
+    <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()">↻ 갱신</button>
+  </div>
+</header>
+
+<!-- TAB NAV -->
+<nav class="tabnav">
+  <button class="tab on" onclick="switchTab(1)">
+    <span class="tab-dot" style="background:var(--cyn)"></span>
+    글로벌 리스크 지도
+    <span class="tab-badge" id="tab1badge">—</span>
+  </button>
+  <button class="tab" onclick="switchTab(2)">
+    <span class="tab-dot" style="background:var(--amb)"></span>
+    리스크 분석
+    <span class="tab-badge" id="tab2badge">—</span>
+  </button>
+  <button class="tab" onclick="switchTab(3)">
+    <span class="tab-dot" style="background:var(--grn)"></span>
+    글로벌 뉴스
+    <span class="tab-badge" id="tab3badge">—</span>
+  </button>
+  <div class="tabnav-right">
+    <div class="alert-chip" id="alertChip" onclick="switchTab(3)">
+      <span class="alert-dot"></span>
+      <span id="alertChipTxt">Critical 0건</span>
+    </div>
+  </div>
+</nav>
+
+<!-- PAGES -->
+<div class="pages">
+
+  <!-- ══ PAGE 1: MAP ══ -->
+  <div class="page on" id="page1">
+    <div class="p1-layout">
+
+      <!-- MAP SVG -->
+      <div class="map-area" id="mapArea">
+        <svg id="worldMap"></svg>
+        <!-- Controls -->
+        <div class="map-ctrls">
+          <span class="clbl">TOUR</span>
+          <button class="cbtn on" id="btnPlay" title="투어 재생" onclick="setTour(true)">▶</button>
+          <button class="cbtn" id="btnPause" title="투어 정지" onclick="setTour(false)">⏸</button>
+        </div>
+        <!-- Tooltip -->
+        <div class="map-tt" id="mapTt"></div>
+        <!-- Legend -->
+        <div class="map-legend">
+          <div class="leg-title">최고 리스크 레벨</div>
+          <div class="leg-row">
+            <div class="leg-item"><div class="leg-dot" style="background:#ff3b5c"></div><span class="leg-txt">Lv.5 Critical</span></div>
+            <div class="leg-item"><div class="leg-dot" style="background:#f59e0b"></div><span class="leg-txt">Lv.4 High</span></div>
+            <div class="leg-item"><div class="leg-dot" style="background:#3b82f6"></div><span class="leg-txt">Lv.3 Medium</span></div>
+            <div class="leg-item"><div class="leg-dot" style="background:#10b981"></div><span class="leg-txt">Lv.2 Low</span></div>
+          </div>
+        </div>
+        <div class="tour-badge">TOUR <span id="tourNum">1</span>/<span id="tourTotal">—</span></div>
+      </div>
+
+      <!-- RIGHT SIDEBAR: region bar chart -->
+      <div class="map-sidebar">
+        <div class="sidebar-hd">
+          <span class="sidebar-title">지역별 뉴스 현황</span>
+          <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--t2)" id="regionFilterLabel"></span>
+        </div>
+        <div class="region-bar-list" id="regionBarList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PAGE 2: ANALYTICS ══ -->
+  <div class="page" id="page2">
+    <div class="p2-layout">
+      <div class="kpi-strip">
+        <div class="kpi c" onclick="openKpiDrawer(5)"><div class="kpi-glow"></div><div class="kpi-bar"></div><div class="kpi-top"><span class="kpi-label">Critical Risk</span><span class="kpi-icon">🔴</span></div><div class="kpi-val" id="kpiC">—</div><div class="kpi-desc">심각도 5 · 즉각 대응</div></div>
+        <div class="kpi h" onclick="openKpiDrawer(4)"><div class="kpi-glow"></div><div class="kpi-bar"></div><div class="kpi-top"><span class="kpi-label">High Risk</span><span class="kpi-icon">🟠</span></div><div class="kpi-val" id="kpiH">—</div><div class="kpi-desc">심각도 4 · 모니터링 강화</div></div>
+        <div class="kpi m" onclick="openKpiDrawer(3)"><div class="kpi-glow"></div><div class="kpi-bar"></div><div class="kpi-top"><span class="kpi-label">Medium Risk</span><span class="kpi-icon">🔵</span></div><div class="kpi-val" id="kpiM">—</div><div class="kpi-desc">심각도 3 · 동향 주시</div></div>
+        <div class="kpi t" onclick="openKpiDrawer(0)"><div class="kpi-glow"></div><div class="kpi-bar"></div><div class="kpi-top"><span class="kpi-label">총 수집 뉴스</span><span class="kpi-icon">📡</span></div><div class="kpi-val" id="kpiT">—</div><div class="kpi-desc" id="kpiSrc">소스 —개</div></div>
+      </div>
+      <div class="charts-row">
+        <div class="chart-panel"><div class="cp-hd"><span class="cp-title">카테고리별 리스크 현황</span></div><div class="cp-body"><div class="cat-list" id="catList"><div class="empty">로딩<span class="ldot">...</span></div></div></div></div>
+        <div class="chart-panel"><div class="cp-hd"><span class="cp-title">공급망 리스크 레이더</span></div><div class="cp-body"><canvas id="radarChart"></canvas></div></div>
+        <div class="chart-panel"><div class="cp-hd"><span class="cp-title">심각도별 분포 현황</span></div><div class="cp-body" style="flex-direction:column;gap:16px">
+          <canvas id="sevChart" style="max-width:150px;max-height:150px"></canvas>
+          <div id="sevLegend" style="display:flex;flex-direction:column;gap:8px;width:100%;max-width:200px"></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PAGE 3: NEWS ══ -->
+  <div class="page" id="page3">
+    <div class="p3-layout">
+      <div class="news-filter">
+        <button class="ftab on" data-cat="전체" onclick="filterCat('전체')">전체</button>
+        <div class="region-chip" id="regionChip">
+          <span id="regionChipLabel">—</span>
+          <span class="region-chip-close" onclick="clearRegionFilter()">✕</span>
+        </div>
+        <div class="filter-right">
+          <span class="sev-label">최소 심각도</span>
+          <select class="sev-sel" onchange="filterSev(this.value)">
+            <option value="1">전체</option><option value="3">보통+</option><option value="4">높음+</option><option value="5">심각</option>
+          </select>
+        </div>
+      </div>
+      <div class="news-body" id="newsList"><div class="empty">로딩<span class="ldot">...</span></div></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- DRAWER -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-hd">
+    <div style="flex:1">
+      <div class="drawer-title" id="drawerTitle">—</div>
+    </div>
+    <div class="drawer-badge" id="drawerBadge"></div>
+    <div class="drawer-close" onclick="closeDrawer()">×</div>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</div>
+
+<!-- NEWS DETAIL MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-hd">
+      <div style="flex:1">
+        <div class="modal-badges" id="modalBadges"></div>
+        <div class="modal-title" id="modalTitle">—</div>
+      </div>
+      <div class="modal-close" onclick="closeModalDirect()">×</div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-meta" id="modalMeta"></div>
+      <div class="modal-summary" id="modalSummary"></div>
+      <div class="modal-impact-hd">📋 SCM 영향 분석</div>
+      <div class="modal-impact" id="modalImpact"></div>
+      <div class="modal-footer" id="modalFooter"></div>
+    </div>
+  </div>
+</div>
+
+<!-- CLS POPUP (portal) -->
+<div id="clsPortal"></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════
+//  DATA
+// ════════════════════════════════════════
+const API = window.location.hostname==='localhost'?'http://localhost:5000/api':'/api';
+const LC = {5:'#ff3b5c',4:'#f59e0b',3:'#3b82f6',2:'#10b981',1:'#4a6585'};
+const LL = {5:'CRITICAL',4:'HIGH',3:'MEDIUM',2:'LOW',1:'INFO'};
+const CAT_C = {'자연재해':'#ff3b5c','전쟁·분쟁':'#c0392b','관세·무역정책':'#f59e0b','수출입 이슈':'#f39c12','물동량 이슈':'#3b82f6','공급 부족(Shortage)':'#8b5cf6','가격 급변':'#10b981','공장·생산 이슈':'#f97316','일반':'#4a6585'};
+const CATS = Object.keys(CAT_C);
+
+const REGIONS = [
+  {id:'taiwan',      name:'대만',       lon:121.0, lat:23.5,  level:5, desc:'TSMC 팹 생산 차질 · 지진 리스크'},
+  {id:'china',       name:'중국',       lon:104.0, lat:35.0,  level:4, desc:'수출 규제 · 미중 무역 긴장'},
+  {id:'usa',         name:'미국',       lon:-100,  lat:40.0,  level:4, desc:'CHIPS법 · 수출통제 강화'},
+  {id:'mideast',     name:'중동·홍해',  lon:43.0,  lat:24.0,  level:4, desc:'홍해 해운 운임 급등'},
+  {id:'korea',       name:'한국',       lon:127.5, lat:37.0,  level:3, desc:'삼성·SK 생산 동향'},
+  {id:'japan',       name:'일본',       lon:138.0, lat:36.5,  level:3, desc:'구마모토 팹 · 소재 공급'},
+  {id:'europe',      name:'유럽',       lon:10.0,  lat:51.0,  level:4, desc:'ASML EUV 선적 중단'},
+  {id:'sea',         name:'동남아',     lon:108.0, lat:12.0,  level:3, desc:'후공정 패키징 · 전력'},
+  {id:'netherlands', name:'네덜란드',   lon:5.3,   lat:52.1,  level:4, desc:'ASML EUV 수출 통제'},
+  {id:'germany',     name:'독일',       lon:10.4,  lat:51.2,  level:2, desc:'인피니온 소재 공급'},
+  {id:'malaysia',    name:'말레이시아', lon:109.7, lat:4.2,   level:3, desc:'인텔 패키징 후공정'},
+  {id:'vietnam',     name:'베트남',     lon:106.0, lat:16.0,  level:3, desc:'앰코 패키징 전력 이슈'},
+  {id:'india',       name:'인도',       lon:79.0,  lat:22.0,  level:2, desc:'반도체 신흥 생산지'},
+  {id:'israel',      name:'이스라엘',   lon:34.9,  lat:31.5,  level:3, desc:'인텔 팹 분쟁 리스크'},
+  {id:'ukraine',     name:'우크라이나', lon:31.2,  lat:49.0,  level:5, desc:'네온가스 생산 중단'},
+];
+const RL = Object.fromEntries(REGIONS.map(r=>[r.id,r.name])); RL.global='글로벌';
+
+const SCM_IMPACT = {
+  '자연재해':'자연재해는 팹 가동 중단, 물류 마비, 원자재 조달 차질로 이어져 수주~수개월 공급 지연을 유발합니다. 안전재고 긴급 확인 및 대체 소싱 옵션 점검이 필요합니다.',
+  '전쟁·분쟁':'분쟁 지역 공급망 차단은 원자재(네온, 팔라듐 등) 및 완제품 물류에 직접 영향을 미칩니다. 공급선 다변화 및 장기 재고 확보 전략 수립이 시급합니다.',
+  '관세·무역정책':'규제 변화는 수출 허가 취득 지연, 추가 관세 비용, 공급업체 교체 필요성으로 이어집니다. 법무/무역팀과 즉시 협의 후 재조달 시나리오를 마련하세요.',
+  '물동량 이슈':'해운 운임 급등 및 항로 변경은 조달 리드타임을 2~8주 연장합니다. 안전재고 상향 조정 및 항공 대체 운송 비용 검토가 필요합니다.',
+  '공급 부족(Shortage)':'핵심 부품 공급 부족은 생산 라인 중단으로 직결됩니다. 2차·3차 공급망까지 재고 현황 파악하고 Long-lead-time 품목 우선 발주를 권장합니다.',
+  '가격 급변':'현물 가격 급등은 조달 예산 초과 및 계약 단가 재협상 필요성을 유발합니다. 환헤지 및 장기 공급 계약 검토를 권장합니다.',
+  '공장·생산 이슈':'팹/패키징 라인 차질은 직접 출하 지연을 야기합니다. 납기 재확인 및 고객사 사전 통보, 대체 생산처 확보가 필요합니다.',
+  '일반':'공급망 모니터링을 지속하며 영향도를 추가 분석하세요.',
+};
+
+// Helper: always produce a valid search URL from title+source
+function makeSearchUrl(title, source) {
+  const q = encodeURIComponent((title||'') + ' ' + (source||''));
+  return 'https://news.google.com/search?q=' + q + '&hl=ko';
+}
+// Ensure article always has a usable URL
+function articleUrl(a) {
+  if (a.url && a.url !== '#' && a.url.startsWith('http')) return a.url;
+  return makeSearchUrl(a.title, a.source);
+}
+
+const MOCK_ARTICLES = [
+  {id:'1',title:'대만 지진으로 TSMC 주요 팹 가동 일시 중단',source:'Reuters Tech',url:'https://www.reuters.com/technology/tsmc-says-resuming-operations-after-earthquake-2024-04-03/',published:'2025-03-02 08:30',summary_ko:'대만 동부 해안에서 규모 7.4 강진 발생. TSMC 타이난 팹 일부 라인 24시간 가동 중단. EUV 장비 점검 진행 중이며 3~6주 공급 지연 예상.',category:'자연재해',severity:5,region:'taiwan'},
+  {id:'2',title:'미국, 중국 HBM 반도체 장비 수출 추가 제재',source:'전자신문',url:'https://www.etnews.com/20241009000130',published:'2025-03-02 07:15',summary_ko:'HBM 및 고대역폭 메모리 관련 장비에 대한 대중국 수출 통제 강화. 주요 25개 품목 추가 제재 목록 포함.',category:'관세·무역정책',severity:4,region:'china'},
+  {id:'3',title:'홍해 사태 지속 — 아시아-유럽 해운 운임 35% 급등',source:'한국경제IT',url:'https://news.google.com/search?q=%ED%99%8D%ED%95%B4+%ED%95%B4%EC%9A%B4+%EC%9A%B4%EC%9E%84+%EB%B0%98%EB%8F%84%EC%B2%B4+SCM&hl=ko',published:'2025-03-01 14:00',summary_ko:'후티 반군 공격 지속으로 아시아-유럽 컨테이너 운임 35% 상승. 주요 선사들이 수에즈 운하 대신 희망봉 우회 채택.',category:'물동량 이슈',severity:4,region:'mideast'},
+  {id:'4',title:'NAND 가격 Q1 40% 급등 — AI 서버 수요 폭증',source:'SemiEngineering',url:'https://semiengineering.com/nand-flash-prices-rising-on-strong-ai-demand/',published:'2025-03-01 10:00',summary_ko:'삼성·SK하이닉스 NAND 생산 감축 지속으로 엔터프라이즈 SSD 가격 40% 상승. AI 서버 수요 폭증으로 수급 불균형 가속.',category:'가격 급변',severity:4,region:'korea'},
+  {id:'5',title:'러-우 전쟁 — 반도체 소재 네온 가스 공급 불안 지속',source:'Reuters Tech',url:'https://www.reuters.com/business/energy/ukraine-war-disrupts-neon-supply-chip-makers-2022-03-11/',published:'2025-02-28 09:00',summary_ko:'EUV 리소그래피 필수 소재인 네온 가스 글로벌 공급망 완전 미회복. 우크라이나 주요 생산시설 피해 지속.',category:'전쟁·분쟁',severity:5,region:'ukraine'},
+  {id:'6',title:'ASML, 중국향 EUV 장비 선적 전면 중단',source:'FT Tech',url:'https://www.ft.com/content/asml-china-semiconductor-export-controls',published:'2025-02-27 20:00',summary_ko:'네덜란드 ASML이 미국 압박으로 중국향 EUV 장비 선적을 전면 중단. 중국 첨단 반도체 공정 생산에 심각한 영향.',category:'관세·무역정책',severity:5,region:'netherlands'},
+  {id:'7',title:'삼성전자 파운드리 물량 TSMC 이관 검토 공식화',source:'EE Times',url:'https://www.eetimes.com/samsung-foundry-yield-issues-push-customers-to-tsmc/',published:'2025-02-27 16:00',summary_ko:'삼성 3나노 수율 문제로 일부 AP 물량을 TSMC로 이관하는 방안 공식 검토. 파운드리 점유율 재편 예상.',category:'공급 부족(Shortage)',severity:4,region:'korea'},
+  {id:'8',title:'일본 구마모토 TSMC 팹 화재 경보 발생',source:'BBC Tech',url:'https://news.google.com/search?q=TSMC+Kumamoto+JASM+fab+fire+alarm&hl=en',published:'2025-02-26 18:00',summary_ko:'TSMC 구마모토(JASM) 팹 1공장에서 화재 경보 발생 후 일시 대피. 실제 화재 아니며 6시간 내 재가동.',category:'공장·생산 이슈',severity:3,region:'japan'},
+  {id:'9',title:'미국 CHIPS법 보조금 수령 기업 중국 투자 제한 강화',source:'NYT Tech',url:'https://www.nytimes.com/2024/04/09/technology/chips-act-china-investment-restrictions.html',published:'2025-02-25 10:00',summary_ko:'CHIPS법 보조금 수령 기업에 대한 중국 반도체 시설 투자 제한이 강화. 합작 투자 및 기술 이전 제한 포함.',category:'관세·무역정책',severity:4,region:'usa'},
+  {id:'10',title:'베트남 반도체 후공정 전력 이슈로 생산 중단',source:'Supply Chain Dive',url:'https://www.supplychaindive.com/news/vietnam-semiconductor-packaging-power-shortage/735000/',published:'2025-02-24 09:00',summary_ko:'베트남 북부 공단 전력 공급 불안정으로 인텔·앰코 패키징 라인 일시 중단. 완제품 출하 2주 지연 예상.',category:'공장·생산 이슈',severity:3,region:'vietnam'},
+  {id:'11',title:'DRAM 현물가 2주 연속 하락 — PC 수요 둔화',source:'SemiEngineering',url:'https://semiengineering.com/dram-spot-price-decline-pc-demand-slowdown/',published:'2025-02-22 11:00',summary_ko:'DDR5 현물 가격 2주 연속 소폭 하락. PC·모바일 수요 둔화 우려. AI 서버향 수요는 여전히 강세.',category:'가격 급변',severity:3,region:'global'},
+  {id:'12',title:'대만 전력 수급 불안 — 여름철 팹 가동 리스크',source:'전자신문',url:'https://www.etnews.com/20240520000089',published:'2025-02-21 08:00',summary_ko:'대만 여름철 전력 수요 급증에 대비해 경제부가 반도체 공장 전력 우선 공급 계획 발표.',category:'자연재해',severity:3,region:'taiwan'},
+];
+const MOCK_STATS = {updated_at:'2025-03-02 09:15',total:12,category_count:{'자연재해':2,'전쟁·분쟁':1,'관세·무역정책':3,'물동량 이슈':1,'공급 부족(Shortage)':1,'가격 급변':2,'공장·생산 이슈':2},severity_dist:{'3':4,'4':5,'5':3},source_count:{'Reuters Tech':2,'전자신문':2,'한국경제IT':1,'SemiEngineering':2,'EE Times':1,'BBC Tech':1,'NYT Tech':1,'FT Tech':1,'Supply Chain Dive':1}};
+
+// ════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════
+let allArticles=[], currentCat='전체', currentSev=1, activeRegionId=null;
+let radarChart=null, sevChart=null;
+let classOverrides = JSON.parse(localStorage.getItem('scm_cls')||'{}');
+let feedbackLog    = JSON.parse(localStorage.getItem('scm_fb')||'[]');
+let tourOn=true, tourIdx=0, tourTimer=null, tourProg=0, tourProgTimer=null;
+const TOUR_MS=5000;
+let mapProj=null, mapSvg=null, mapW=0, mapH=0;
+let currentTab=1;
+
+// ════════════════════════════════════════
+//  BOOT
+// ════════════════════════════════════════
+async function init(){
+  startClock();
+  await Promise.all([loadStats(), loadNews()]);
+  buildCatTabs();
+  initMap();
+  startTour();
+  document.addEventListener('click', e=>{
+    if(!e.target.closest('.cls-popup')&&!e.target.closest('.edit-cls-btn')&&!e.target.closest('.cbadge')&&!e.target.closest('.sev-pips'))
+      closeClsPopup();
+  });
+}
+
+function startClock(){
+  const el=document.getElementById('clock');
+  const t=()=>el.textContent=new Date().toLocaleString('ko-KR',{hour12:false,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  t(); setInterval(t,1000);
+}
+
+// ════════════════════════════════════════
+//  TABS
+// ════════════════════════════════════════
+function switchTab(n){
+  currentTab=n;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',i+1===n));
+  document.querySelectorAll('.page').forEach((p,i)=>p.classList.toggle('on',i+1===n));
+  if(n===1) setTimeout(()=>{ if(mapSvg) redrawPins(); }, 50);
+}
+
+// ════════════════════════════════════════
+//  API
+// ════════════════════════════════════════
+async function apiFetch(p){
+  try{const r=await fetch(API+p,{signal:AbortSignal.timeout(4000)});if(!r.ok)throw 0;return await r.json();}
+  catch{
+    if(p.startsWith('/stats'))return MOCK_STATS;
+    if(p.startsWith('/news'))return{updated_at:MOCK_STATS.updated_at,total:MOCK_ARTICLES.length,articles:MOCK_ARTICLES};
+    return null;
+  }
+}
+
+// ════════════════════════════════════════
+//  CLS HELPERS
+// ════════════════════════════════════════
+function eff(a){const o=classOverrides[a.id]||{};return{category:o.category||a.category,severity:o.severity||a.severity,region:a.region};}
+
+function saveOverride(id,cat,sev){
+  const a=allArticles.find(x=>x.id===id);
+  classOverrides[id]={category:cat,severity:sev};
+  localStorage.setItem('scm_cls',JSON.stringify(classOverrides));
+  feedbackLog.push({id,ts:new Date().toISOString(),title:a?.title,orig:{category:a?.category,severity:a?.severity},fix:{category:cat,severity:sev}});
+  if(feedbackLog.length>500)feedbackLog.shift();
+  localStorage.setItem('scm_fb',JSON.stringify(feedbackLog));
+  showToast(`✅ 분류 저장 · 피드백 ${feedbackLog.length}건`);
+  renderNews(); redrawPins(); rebuildStats();
+}
+
+async function llmClassify(articleId){
+  const a=allArticles.find(x=>x.id===articleId);if(!a)return;
+  const stEl=document.getElementById('cls-ai-st');
+  if(stEl)stEl.textContent='🤖 AI 분류 요청 중...';
+  const sample=feedbackLog.slice(-15).filter(f=>f.fix).map(f=>`"${f.title?.slice(0,25)}…" → ${f.fix.category}/Lv${f.fix.severity}`).join('\n');
+  const prompt=`당신은 반도체 SCM 전문가입니다.\n뉴스 제목: ${a.title}\n내용: ${a.summary_ko||''}\n\n분류 카테고리(하나): ${CATS.join(', ')}\n심각도 1~5(1=정보,5=심각)\n${sample?'최근 수정 예시:\n'+sample+'\n':''}\nJSON만 응답: {"category":"...", "severity":숫자, "reason":"..."}`;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:[{role:'user',content:prompt}]})});
+    const d=await res.json();
+    const txt=d.content?.find(c=>c.type==='text')?.text||'';
+    const p=JSON.parse(txt.replace(/```json|```/g,'').trim());
+    if(stEl)stEl.innerHTML=`<span style="color:var(--cyn)">AI 제안:</span> ${p.category} / Lv.${p.severity}<br><span style="color:var(--t2);font-size:10px">${p.reason||''}</span>`;
+    const catSel=document.getElementById('cls-cat-sel');if(catSel)catSel.value=p.category;
+    document.querySelectorAll('.cls-sev-btn').forEach(b=>{const v=parseInt(b.dataset.v);b.classList.toggle('sel',v===p.severity);b.style.borderColor=v===p.severity?LC[v]:'';b.style.background=v===p.severity?LC[v]+'18':'';});
+  }catch(e){if(stEl)stEl.textContent='⚠ AI 연결 실패';}
+}
+
+let clsActiveId=null;
+function openClsPopup(articleId, anchorEl){
+  closeClsPopup();
+  clsActiveId=articleId;
+  const a=allArticles.find(x=>x.id===articleId);if(!a)return;
+  const cur=eff(a);
+  const rect=anchorEl.getBoundingClientRect();
+  const popup=document.createElement('div');
+  popup.className='cls-popup'; popup.id='clsPopup';
+  popup.innerHTML=`<div class="cls-popup-hd">분류 수정 <span class="cls-popup-close" onclick="closeClsPopup()">×</span></div>
+<div class="cls-field"><div class="cls-label">카테고리</div><select class="cls-sel" id="cls-cat-sel">${CATS.map(c=>`<option value="${c}"${c===cur.category?' selected':''}>${c}</option>`).join('')}</select></div>
+<div class="cls-field"><div class="cls-label">심각도</div><div class="cls-sev-btns">${[1,2,3,4,5].map(v=>`<button class="cls-sev-btn${v===cur.severity?' sel':''}" data-v="${v}" style="color:${LC[v]};${v===cur.severity?'border-color:'+LC[v]+';background:'+LC[v]+'18':''}" onclick="clsSevClick(this,${v})">${v}</button>`).join('')}</div></div>
+<div class="cls-popup-footer"><button class="cls-save" onclick="clsSave()">💾 저장</button><button class="cls-ai" onclick="llmClassify('${articleId}')">🤖 AI 제안</button></div>
+<div class="cls-ai-st" id="cls-ai-st"></div>`;
+  document.getElementById('clsPortal').appendChild(popup);
+  let top=rect.bottom+6, left=rect.left;
+  if(top+260>window.innerHeight)top=rect.top-266;
+  if(left+300>window.innerWidth)left=window.innerWidth-310;
+  popup.style.top=top+'px'; popup.style.left=left+'px';
+}
+function clsSevClick(btn,v){
+  document.querySelectorAll('.cls-sev-btn').forEach(b=>{const bv=parseInt(b.dataset.v);b.classList.toggle('sel',bv===v);b.style.borderColor=bv===v?LC[bv]:'';b.style.background=bv===v?LC[bv]+'18':'';});
+}
+function clsSave(){
+  const cat=document.getElementById('cls-cat-sel')?.value;
+  const sevBtn=document.querySelector('.cls-sev-btn.sel');
+  const sev=sevBtn?parseInt(sevBtn.dataset.v):3;
+  if(clsActiveId&&cat)saveOverride(clsActiveId,cat,sev);
+  closeClsPopup();
+}
+function closeClsPopup(){document.getElementById('clsPortal').innerHTML='';clsActiveId=null;}
+
+// ════════════════════════════════════════
+//  STATS & CHARTS
+// ════════════════════════════════════════
+async function loadStats(){
+  const d=await apiFetch('/stats');if(!d)return;
+  const s=d.severity_dist||{},c5=s['5']||0,c4=s['4']||0,c3=s['3']||0;
+  ['kpiC','topC'].forEach(id=>document.getElementById(id).textContent=c5);
+  ['kpiH','topH'].forEach(id=>document.getElementById(id).textContent=c4);
+  document.getElementById('kpiM').textContent=c3;
+  document.getElementById('kpiT').textContent=d.total||0;
+  document.getElementById('topT').textContent=d.total||0;
+  document.getElementById('kpiSrc').textContent=`소스 ${Object.keys(d.source_count||{}).length}개`;
+  document.getElementById('lastUpdated').textContent='업데이트 '+(d.updated_at||'—');
+  document.getElementById('tab1badge').textContent=(c5+c4)+'건';
+  document.getElementById('tab2badge').textContent=d.total+'건';
+  document.getElementById('tab3badge').textContent=d.total+'건';
+  if(c5>0){document.getElementById('alertChip').classList.add('show');document.getElementById('alertChipTxt').textContent=`Critical ${c5}건`;}
+  buildCatBars(d.category_count||{});
+  buildRadar(d.category_count||{});
+  buildSevChart(d.severity_dist||{});
+  buildRegionBars();
+}
+
+function rebuildStats(){
+  const cats={},sevs={};
+  allArticles.forEach(a=>{const c=eff(a);cats[c.category]=(cats[c.category]||0)+1;sevs[c.severity]=(sevs[c.severity]||0)+1;});
+  buildCatBars(cats);buildRadar(cats);buildSevChart(sevs);
+  const c5=sevs['5']||0;
+  ['kpiC','topC'].forEach(id=>document.getElementById(id).textContent=c5);
+  document.getElementById('kpiH').textContent=sevs['4']||0;
+  document.getElementById('kpiM').textContent=sevs['3']||0;
+}
+
+function buildCatBars(counts){
+  const el=document.getElementById('catList');
+  const cats=Object.entries(counts).filter(([k,v])=>k!=='일반'&&v>0).sort((a,b)=>b[1]-a[1]);
+  if(!cats.length){el.innerHTML='<div class="empty">데이터 없음</div>';return;}
+  const mx=Math.max(...cats.map(c=>c[1]),1);
+  el.innerHTML=cats.map(([cat,cnt])=>`<div class="cat-row"><span class="cat-name" title="${cat}">${cat}</span><div class="cat-track"><div class="cat-fill" style="width:${(cnt/mx*100).toFixed(1)}%;background:${CAT_C[cat]||'#4a6585'}"></div></div><span class="cat-n">${cnt}</span></div>`).join('');
+}
+
+function buildRadar(counts){
+  const labels=['자연재해','전쟁·분쟁','관세·무역','물동량','공급부족','가격급변','공장이슈'];
+  const keys=['자연재해','전쟁·분쟁','관세·무역정책','물동량 이슈','공급 부족(Shortage)','가격 급변','공장·생산 이슈'];
+  if(radarChart)radarChart.destroy();
+  radarChart=new Chart(document.getElementById('radarChart'),{type:'radar',data:{labels,datasets:[{data:keys.map(k=>counts[k]||0),backgroundColor:'rgba(0,212,255,.07)',borderColor:'#00d4ff',borderWidth:1.8,pointBackgroundColor:'#00d4ff',pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{beginAtZero:true,ticks:{display:false},grid:{color:'rgba(255,255,255,.05)'},pointLabels:{font:{size:11,family:'Noto Sans KR'},color:'#8eb8d8'},angleLines:{color:'rgba(255,255,255,.05)'}}}}});
+}
+
+function buildSevChart(dist){
+  const data=[{l:'Lv.5 Critical',v:dist['5']||0,c:'#ff3b5c'},{l:'Lv.4 High',v:dist['4']||0,c:'#f59e0b'},{l:'Lv.3 Medium',v:dist['3']||0,c:'#3b82f6'},{l:'Lv.2 Low',v:dist['2']||0,c:'#10b981'},{l:'Lv.1 Info',v:dist['1']||0,c:'#4a6585'}].filter(d=>d.v>0);
+  if(sevChart)sevChart.destroy();
+  sevChart=new Chart(document.getElementById('sevChart'),{type:'doughnut',data:{labels:data.map(d=>d.l),datasets:[{data:data.map(d=>d.v),backgroundColor:data.map(d=>d.c+'bb'),borderColor:data.map(d=>d.c),borderWidth:1.5,hoverOffset:5}]},options:{responsive:true,maintainAspectRatio:true,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed}건`}}}}});
+  document.getElementById('sevLegend').innerHTML=data.map(d=>`<div style="display:flex;align-items:center;gap:7px"><span style="width:8px;height:8px;border-radius:2px;background:${d.c};flex-shrink:0"></span><span style="font-size:12px;color:#8eb8d8;font-family:'DM Mono',monospace;flex:1">${d.l}</span><span style="font-size:14px;color:#e8f2ff;font-weight:700;font-family:'DM Mono',monospace">${d.v}</span></div>`).join('');
+}
+
+function buildRegionBars(){
+  const el=document.getElementById('regionBarList');if(!el)return;
+  const data=REGIONS.map(r=>{
+    const arts=allArticles.filter(a=>a.region===r.id);
+    const maxLv=arts.length?Math.max(...arts.map(a=>eff(a).severity)):r.level;
+    return{...r,cnt:arts.length,maxLv,col:LC[maxLv]||LC[r.level]};
+  }).sort((a,b)=>b.cnt-a.cnt||b.maxLv-a.maxLv);
+  const mx=Math.max(...data.map(d=>d.cnt),1);
+  el.innerHTML=data.map(r=>`
+    <div class="rb-row${activeRegionId===r.id?' active':''}" data-region="${r.id}" onclick="onRegionBarClick('${r.id}')">
+      <span class="rb-name">${r.name}</span>
+      <div class="rb-track"><div class="rb-fill" style="width:${(r.cnt/mx*100).toFixed(1)}%;background:${r.col}"></div></div>
+      <span class="rb-cnt">${r.cnt}</span>
+      <span class="rb-lv" style="color:${r.col}">Lv.${r.maxLv}</span>
+    </div>`).join('');
+}
+
+function onRegionBarClick(id){
+  const r=REGIONS.find(x=>x.id===id);if(!r)return;
+  activeRegionId=id;
+  buildRegionBars();
+  setTour(false);
+  // Show drawer with this region's news
+  openRegionDrawer(r);
+}
+
+// ════════════════════════════════════════
+//  MAP
+// ════════════════════════════════════════
+function initMap(){
+  const area=document.getElementById('mapArea');
+  mapW=area.clientWidth||900; mapH=area.clientHeight||500;
+  mapSvg=d3.select('#worldMap')
+    .attr('width',mapW).attr('height',mapH)
+    .attr('viewBox',`0 0 ${mapW} ${mapH}`);
+  mapProj=d3.geoNaturalEarth1().scale(mapW/6.2).translate([mapW/2,mapH/2]);
+  const path=d3.geoPath(mapProj);
+
+  // Ocean bg
+  const defs=mapSvg.append('defs');
+  const og=defs.append('radialGradient').attr('id','og').attr('cx','40%').attr('cy','40%');
+  og.append('stop').attr('offset','0%').attr('stop-color','#05111f');
+  og.append('stop').attr('offset','100%').attr('stop-color','#020810');
+  // Pin shadow
+  defs.append('filter').attr('id','pshadow').html('<feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,.55)"/>');
+  // Vignette
+  const vg=defs.append('radialGradient').attr('id','vg').attr('cx','50%').attr('cy','50%').attr('r','75%');
+  vg.append('stop').attr('offset','55%').attr('stop-color','transparent');
+  vg.append('stop').attr('offset','100%').attr('stop-color','rgba(2,8,18,.6)');
+
+  mapSvg.append('rect').attr('width',mapW).attr('height',mapH).attr('fill','url(#og)');
+
+  d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
+    .then(world=>{
+      import('https://cdn.jsdelivr.net/npm/topojson-client@3/+esm').then(topo=>{
+        const features=topo.feature(world,world.objects.countries).features;
+        const borders=topo.mesh(world,world.objects.countries,(a,b)=>a!==b);
+        // Land gradient
+        const lg=defs.append('linearGradient').attr('id','lg').attr('x1','0').attr('y1','0').attr('x2','0').attr('y2','1');
+        lg.append('stop').attr('offset','0%').attr('stop-color','#112540');
+        lg.append('stop').attr('offset','100%').attr('stop-color','#0b1c32');
+        mapSvg.append('g').selectAll('path').data(features).join('path')
+          .attr('fill','url(#lg)').attr('stroke','#172d4a').attr('stroke-width','.4').attr('d',path);
+        mapSvg.append('path').datum(borders).attr('fill','none').attr('stroke','#1a3560').attr('stroke-width','.35').attr('d',path);
+        // Graticule
+        mapSvg.append('path').datum(d3.geoGraticule()()).attr('fill','none').attr('stroke','rgba(0,55,120,.15)').attr('stroke-width','.3').attr('d',path);
+        mapSvg.append('rect').attr('width',mapW).attr('height',mapH).attr('fill','url(#vg)').attr('pointer-events','none');
+        redrawPins();
+      });
+    }).catch(()=>{ redrawPins(); });
+}
+
+function redrawPins(){
+  if(!mapSvg||!mapProj)return;
+  mapSvg.selectAll('.pin-g').remove();
+  mapSvg.selectAll('.pin-grad').remove();
+  REGIONS.forEach(r=>{
+    const pt=mapProj([r.lon,r.lat]);if(!pt)return;
+    const [px,py]=pt;
+    const arts=allArticles.filter(a=>a.region===r.id);
+    const maxLv=arts.length?Math.max(...arts.map(a=>eff(a).severity)):r.level;
+    const cnt=arts.length;
+    const col=LC[maxLv]||'#4a6585';
+    const rad=13+Math.min(cnt,9)*1.1;
+
+    const gid='pg_'+r.id;
+    const pg=mapSvg.select('defs').append('radialGradient').attr('class','pin-grad').attr('id',gid).attr('cx','35%').attr('cy','35%');
+    pg.append('stop').attr('offset','0%').attr('stop-color','rgba(255,255,255,.4)');
+    pg.append('stop').attr('offset','100%').attr('stop-color',col+'dd');
+
+    const g=mapSvg.append('g').attr('class','pin-g').attr('data-region',r.id)
+      .style('cursor','pointer')
+      .on('click',()=>{setTour(false);const pt2=mapProj([r.lon,r.lat]);showPinTooltip(r,pt2[0],pt2[1],false);openRegionDrawer(r);activeRegionId=r.id;buildRegionBars();})
+      .on('mouseenter',()=>{const pt2=mapProj([r.lon,r.lat]);showPinTooltip(r,pt2[0],pt2[1],false);})
+      .on('mouseleave',()=>{if(!tourOn)hideTt();});
+
+    const rings=maxLv>=5?3:maxLv>=4?2:1;
+    for(let i=0;i<rings;i++){
+      g.append('circle').attr('cx',px).attr('cy',py).attr('r',rad)
+        .attr('fill','none').attr('stroke',col).attr('stroke-width','1.5')
+        .attr('opacity','.55').attr('class',`ring r${i+1}`)
+        .style('animation',`pr ${2.6}s ease-out ${i*0.85}s infinite`);
+    }
+    g.append('circle').attr('cx',px).attr('cy',py).attr('r',rad)
+      .attr('fill',`url(#${gid})`).attr('stroke',col).attr('stroke-width','1.5')
+      .attr('filter','url(#pshadow)');
+    g.append('text').attr('x',px).attr('y',py)
+      .attr('text-anchor','middle').attr('dominant-baseline','central')
+      .attr('font-family',"'DM Mono',monospace").attr('font-size','12').attr('font-weight','700').attr('fill','#fff').attr('pointer-events','none')
+      .text(cnt);
+    g.append('text').attr('x',px).attr('y',py+rad+14)
+      .attr('text-anchor','middle').attr('font-size','11').attr('fill','#8eb8d8').attr('pointer-events','none').attr('font-family',"'Noto Sans KR',sans-serif")
+      .text(r.name);
+  });
+
+  // Pin ring animation via style tag
+  if(!document.getElementById('pinStyle')){
+    const st=document.createElement('style');
+    st.id='pinStyle';
+    st.textContent=`@keyframes pr{0%{r:11;opacity:.55;stroke-width:1.5}100%{r:34;opacity:0;stroke-width:.3}} .pin-g circle.ring.r1{animation:pr 2.6s ease-out 0s infinite} .pin-g circle.ring.r2{animation:pr 2.6s ease-out .85s infinite} .pin-g circle.ring.r3{animation:pr 2.6s ease-out 1.7s infinite}`;
+    document.head.appendChild(st);
+  }
+}
+
+// ════════════════════════════════════════
+//  TOOLTIP
+// ════════════════════════════════════════
+function hideTt(){document.getElementById('mapTt').classList.remove('show','auto');}
+
+function showPinTooltip(r,px,py,isAuto){
+  const tt=document.getElementById('mapTt');
+  const area=document.getElementById('mapArea');
+  const wW=area.clientWidth, wH=area.clientHeight;
+  const ttW=320, ttH=240;
+  let tx=px+18, ty=py-ttH/2;
+  if(tx+ttW>wW-8)tx=px-ttW-18;
+  if(ty<8)ty=8; if(ty+ttH>wH-8)ty=wH-ttH-8;
+
+  const arts=allArticles.filter(a=>a.region===r.id);
+  const maxLv=arts.length?Math.max(...arts.map(a=>eff(a).severity)):r.level;
+  const col=LC[maxLv]||LC[r.level];
+  const ar=activeRegionsWithNews();
+
+  const artHtml=arts.slice(0,3).map(a=>{
+    const c=eff(a);const cc=CAT_C[c.category]||'#4a6585';
+    return `<div class="tt-art" onclick="openArticleModal('${a.id}');hideTt()">
+      <span class="tt-art-cat" style="background:${cc}1a;color:${cc};border:1px solid ${cc}44">${c.category}</span>
+      <span class="tt-art-title">${a.title.length>38?a.title.slice(0,38)+'…':a.title}</span>
+    </div>`;
+  }).join('')||'<div style="font-size:12px;color:var(--t2);padding:3px 0">관련 뉴스 없음</div>';
+  const dotsHtml=ar.map((_,i)=>`<span class="tt-pdot${i===tourIdx%ar.length?' on':''}"></span>`).join('');
+
+  tt.style.left=tx+'px'; tt.style.top=ty+'px';
+  tt.innerHTML=`
+    <div class="tt-hd">
+      <span class="tt-col" style="background:${col};box-shadow:0 0 8px ${col}"></span>
+      <span class="tt-name">${r.name}</span>
+      <span class="tt-lv" style="background:${col}1a;color:${col};border:1px solid ${col}44">Lv.${maxLv} ${LL[maxLv]}</span>
+    </div>
+    <div class="tt-desc">${r.desc}</div>
+    <div class="tt-arts">${artHtml}${arts.length>3?`<div style="font-size:11px;color:var(--cyn);padding:3px 6px;cursor:pointer" onclick="openRegionDrawer(${JSON.stringify(r)});hideTt()">+${arts.length-3}건 더 보기 →</div>`:''}</div>
+    <div class="tt-foot">
+      <span class="tt-hint" onclick="openRegionDrawer(${JSON.stringify(r).replace(/"/g,"'")})" style="cursor:pointer">📋 전체 뉴스 보기</span>
+      ${isAuto?`<div class="tt-prog-wrap"><div class="tt-pbar"><div class="tt-pfill" style="width:${tourProg}%"></div></div><div class="tt-pdots">${dotsHtml}</div></div>`:''}
+    </div>`;
+  tt.className='map-tt show'+(isAuto?' auto':'');
+}
+
+// ════════════════════════════════════════
+//  TOUR
+// ════════════════════════════════════════
+function activeRegionsWithNews(){return REGIONS.filter(r=>allArticles.some(a=>a.region===r.id));}
+
+function startTour(){
+  if(tourTimer)clearInterval(tourTimer);
+  if(tourProgTimer)clearInterval(tourProgTimer);
+  tourIdx=0; tourProg=0;
+  showTourStep();
+  tourTimer=setInterval(()=>{
+    if(!tourOn)return;
+    const ar=activeRegionsWithNews();if(!ar.length)return;
+    tourIdx=(tourIdx+1)%ar.length; tourProg=0; showTourStep();
+  },TOUR_MS);
+  tourProgTimer=setInterval(()=>{
+    if(!tourOn)return;
+    tourProg=Math.min(tourProg+100/(TOUR_MS/100),100);
+    const f=document.querySelector('.tt-pfill');if(f)f.style.width=tourProg+'%';
+    const ar=activeRegionsWithNews();
+    document.querySelectorAll('.tt-pdot').forEach((d,i)=>d.classList.toggle('on',i===tourIdx%ar.length));
+  },100);
+}
+
+function showTourStep(){
+  const ar=activeRegionsWithNews();if(!ar.length)return;
+  const r=ar[tourIdx%ar.length];
+  document.getElementById('tourNum').textContent=(tourIdx%ar.length)+1;
+  document.getElementById('tourTotal').textContent=ar.length;
+  const pt=mapProj?mapProj([r.lon,r.lat]):null;
+  if(pt)showPinTooltip(r,pt[0],pt[1],true);
+}
+
+function setTour(val){
+  tourOn=val;
+  document.getElementById('btnPlay').classList.toggle('on',val);
+  document.getElementById('btnPause').classList.toggle('on',!val);
+  if(!val)hideTt();
+}
+
+// ════════════════════════════════════════
+//  DRAWER (news list panel)
+// ════════════════════════════════════════
+function openRegionDrawer(r){
+  const arts=allArticles.filter(a=>a.region===r.id);
+  const maxLv=arts.length?Math.max(...arts.map(a=>eff(a).severity)):r.level;
+  const col=LC[maxLv]||LC[r.level];
+  document.getElementById('drawerTitle').textContent=`📍 ${r.name} — 공급망 이슈`;
+  document.getElementById('drawerBadge').textContent=`${arts.length}건`;
+  document.getElementById('drawerBadge').style.cssText=`background:${col}1a;color:${col};border:1px solid ${col}44`;
+  document.getElementById('drawerBody').innerHTML=arts.length
+    ?arts.map(a=>{const c=eff(a);const cc=CAT_C[c.category]||'#4a6585';const lc=LC[c.severity]||'#4a6585';
+      const pips=[1,2,3,4,5].map(i=>`<span class="dc-pip${i<=c.severity?' on':''}" style="${i<=c.severity?'background:'+lc:''}"></span>`).join('');
+      return `<div class="drawer-card" onclick="openArticleModal('${a.id}')">
+        <div class="dc-top">
+          <span class="dc-cat" style="background:${cc}1a;color:${cc};border:1px solid ${cc}44">${c.category}</span>
+          <span class="dc-sev">${pips}</span>
+          <span class="dc-time">${a.published}</span>
+        </div>
+        <div class="dc-title">${a.title}</div>
+        <div class="dc-summary">${a.summary_ko?.slice(0,100)||''}${(a.summary_ko?.length||0)>100?'…':''}</div>
+      </div>`;
+    }).join('')
+    :`<div class="empty">해당 지역 뉴스 없음</div>`;
+  document.getElementById('drawerOverlay').classList.add('show');
+  document.getElementById('drawer').classList.add('show');
+}
+
+function openKpiDrawer(sev){
+  const arts=sev>0?allArticles.filter(a=>eff(a).severity===sev):allArticles;
+  const title=sev>0?`Lv.${sev} ${LL[sev]} — 뉴스 목록`:'전체 뉴스 목록';
+  const col=sev>0?LC[sev]:'#94a3b8';
+  document.getElementById('drawerTitle').textContent=title;
+  document.getElementById('drawerBadge').textContent=arts.length+'건';
+  document.getElementById('drawerBadge').style.cssText=`background:${col}1a;color:${col};border:1px solid ${col}44`;
+  document.getElementById('drawerBody').innerHTML=arts.length
+    ?arts.map(a=>{const c=eff(a);const cc=CAT_C[c.category]||'#4a6585';const lc=LC[c.severity]||'#4a6585';
+      const pips=[1,2,3,4,5].map(i=>`<span class="dc-pip${i<=c.severity?' on':''}" style="${i<=c.severity?'background:'+lc:''}"></span>`).join('');
+      return `<div class="drawer-card" onclick="openArticleModal('${a.id}')">
+        <div class="dc-top"><span class="dc-cat" style="background:${cc}1a;color:${cc};border:1px solid ${cc}44">${c.category}</span><span class="dc-sev">${pips}</span><span class="dc-time">${a.published}</span></div>
+        <div class="dc-title">${a.title}</div>
+        <div class="dc-summary">${a.summary_ko?.slice(0,100)||''}…</div>
+      </div>`;
+    }).join(''):`<div class="empty">뉴스 없음</div>`;
+  document.getElementById('drawerOverlay').classList.add('show');
+  document.getElementById('drawer').classList.add('show');
+}
+
+function closeDrawer(){
+  document.getElementById('drawerOverlay').classList.remove('show');
+  document.getElementById('drawer').classList.remove('show');
+}
+
+// ════════════════════════════════════════
+//  ARTICLE DETAIL MODAL
+// ════════════════════════════════════════
+function openArticleModal(id){
+  const a=allArticles.find(x=>x.id===id);if(!a)return;
+  const c=eff(a);
+  const col=LC[c.severity]||'#4a6585';
+  const cc=CAT_C[c.category]||'#4a6585';
+  const pips=[1,2,3,4,5].map(i=>`<span style="display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:2px;background:${i<=c.severity?col:'var(--b0)'}"></span>`).join('');
+  document.getElementById('modalBadges').innerHTML=`
+    <span style="font-family:'DM Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;background:${cc}1a;color:${cc};border:1px solid ${cc}44">${c.category}</span>
+    <span style="font-family:'DM Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;background:${col}1a;color:${col};border:1px solid ${col}44">Lv.${c.severity} ${LL[c.severity]}</span>
+    <span style="font-family:'DM Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(0,212,255,.07);color:var(--cyn);border:1px solid rgba(0,212,255,.2)">📍 ${RL[a.region]||'글로벌'}</span>`;
+  document.getElementById('modalTitle').textContent=a.title;
+  document.getElementById('modalMeta').innerHTML=`<span>📰 ${a.source}</span><span>🕐 ${a.published}</span><span>${pips}</span>`;
+  document.getElementById('modalSummary').textContent=a.summary_ko||'요약 정보 없음';
+  document.getElementById('modalImpact').textContent=SCM_IMPACT[c.category]||SCM_IMPACT['일반'];
+  const finalUrl = articleUrl(a);
+  document.getElementById('modalFooter').innerHTML=`
+    <a href="${finalUrl}" target="_blank" rel="noopener" class="modal-link">🔗 원문 보기 (${a.source})</a>
+    <button class="modal-edit-btn" onclick="closeModalDirect();openClsPopup('${a.id}',document.getElementById('modalTitle'))">✎ 분류 수정</button>`;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function closeModal(e){if(e.target===document.getElementById('modalOverlay'))closeModalDirect();}
+function closeModalDirect(){document.getElementById('modalOverlay').classList.remove('show');}
+
+// ════════════════════════════════════════
+//  NEWS
+// ════════════════════════════════════════
+async function loadNews(){
+  const d=await apiFetch('/news');if(!d)return;
+  allArticles=d.articles||[];
+  document.getElementById('lastUpdated').textContent='업데이트 '+(d.updated_at||'—');
+  renderNews();
+}
+
+function renderNews(){
+  const el=document.getElementById('newsList');
+  let f=allArticles;
+  if(activeRegionId)f=f.filter(a=>a.region===activeRegionId);
+  if(currentSev>1)f=f.filter(a=>eff(a).severity>=currentSev);
+  if(currentCat!=='전체')f=f.filter(a=>eff(a).category===currentCat);
+  document.getElementById('tab3badge').textContent=f.length+'건';
+  document.getElementById('regionChip').classList.toggle('show',!!activeRegionId);
+  if(activeRegionId){const r=REGIONS.find(x=>x.id===activeRegionId);document.getElementById('regionChipLabel').textContent=`📍 ${r?.name}`;}
+  if(!f.length){el.innerHTML='<div class="empty">해당 조건의 뉴스가 없습니다.</div>';return;}
+  el.innerHTML=f.map(a=>{
+    const c=eff(a);const col=LC[c.severity]||'#4a6585';const cc=CAT_C[c.category]||'#4a6585';
+    const pips=[1,2,3,4,5].map(i=>`<span class="pip${i<=c.severity?' on':''}" style="${i<=c.severity?'background:'+col:''}"></span>`).join('');
+    return `<div class="ncard" id="card-${a.id}" style="border-left-color:${col}" onclick="openArticleModal('${a.id}')">
+      <div class="ncard-top">
+        <div class="ncard-left">
+          <span class="cbadge" style="background:${cc}18;color:${cc};border:1px solid ${cc}44" onclick="event.stopPropagation();openClsPopup('${a.id}',this)">${c.category} ✎</span>
+          <span class="rbadge">📍 ${RL[a.region]||'글로벌'}</span>
+          <span class="sev-pips" onclick="event.stopPropagation();openClsPopup('${a.id}',this)" title="심각도 수정">${pips}</span>
+        </div>
+        <span class="ncard-time">${a.published}</span>
+      </div>
+      <div class="ntitle">${a.title}</div>
+      <div class="nsummary">${a.summary_ko||''}</div>
+      <div class="nfooter">
+        <span class="nsource">${a.source}</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="edit-cls-btn" onclick="event.stopPropagation();openClsPopup('${a.id}',this)">✎ 분류 수정</button>
+          <a href="${articleUrl(a)}" target="_blank" rel="noopener" class="orig-link" onclick="event.stopPropagation()">원문 보기 →</a>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function buildCatTabs(){
+  const bar=document.querySelector('.news-filter');
+  const right=bar.querySelector('.filter-right');
+  const chip=bar.querySelector('.region-chip');
+  bar.innerHTML='';
+  ['전체',...CATS.filter(c=>c!=='일반')].forEach(cat=>{
+    const b=document.createElement('button');b.className='ftab'+(cat==='전체'?' on':'');b.dataset.cat=cat;b.textContent=cat;b.onclick=()=>filterCat(cat);bar.appendChild(b);
+  });
+  bar.appendChild(chip); bar.appendChild(right);
+}
+
+function filterCat(cat){currentCat=cat;document.querySelectorAll('.ftab').forEach(b=>b.classList.toggle('on',b.dataset.cat===cat));renderNews();}
+function filterSev(v){currentSev=parseInt(v)||1;renderNews();}
+function clearRegionFilter(){activeRegionId=null;buildRegionBars();document.getElementById('regionChip').classList.remove('show');renderNews();}
+
+// ════════════════════════════════════════
+//  REFRESH
+// ════════════════════════════════════════
+async function manualRefresh(){
+  const btn=document.getElementById('refreshBtn');btn.disabled=true;btn.textContent='↻ 수집 중...';showToast('뉴스 갱신 중...');
+  try{await fetch(API+'/refresh',{method:'POST'});await Promise.all([loadStats(),loadNews()]);showToast('✅ 갱신 완료');}
+  catch{showToast('⚠ 서버 미연결 — 데모 모드');}
+  btn.disabled=false;btn.textContent='↻ 갱신';
+}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
+
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>
