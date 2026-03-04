@@ -154,15 +154,15 @@ def index():
 # ─────────────────────────────────────────────
 # 진입점
 # ─────────────────────────────────────────────
-if __name__ == "__main__":
-    print("=" * 52)
-    print("  글로벌 반도체 SCM 리스크 브리핑 대시보드")
-    print("  http://localhost:5000")
-    print("=" * 52)
+# if __name__ == "__main__":
+#     print("=" * 52)
+#     print("  글로벌 반도체 SCM 리스크 브리핑 대시보드")
+#     print("  http://localhost:5000")
+#     print("=" * 52)
 
-    # 캐시 없으면 시작 시 1회 수집
-    if not load_cache()["articles"]:
-        print("[초기화] 뉴스 최초 수집 중...")
-        scheduled_fetch()
+#     # 캐시 없으면 시작 시 1회 수집
+#     if not load_cache()["articles"]:
+#         print("[초기화] 뉴스 최초 수집 중...")
+#         scheduled_fetch()
 
-    app.run(debug=True, port=5000, use_reloader=False)
+#     app.run(debug=True, port=5000, use_reloader=False)
