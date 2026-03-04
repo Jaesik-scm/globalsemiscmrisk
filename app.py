@@ -2,38 +2,51 @@ import streamlit as st
 import streamlit.components.v1 as components
 import os
 
-# 1. 화면 설정 (반드시 모든 st 함수 중 가장 위에 와야 함)
+# 1. 화면 설정
 st.set_page_config(page_title="SCM 리스크 대시보드", layout="wide")
 
-# 2. 여백 제거 (지도를 화면에 꽉 채우기 위함)
+# 2. 크롬에서 빈틈없이 꽉 채우는 초강력 여백 제거 (이걸로 교체)
 st.markdown("""
     <style>
+    /* 1. 스트림릿 기본 헤더, 푸터, 메뉴 완전 삭제 */
+    header {visibility: hidden; height: 0px;}
+    footer {visibility: hidden;}
+    #MainMenu {visibility: hidden;}
+
+    /* 2. 메인 콘텐츠 영역 여백(Padding) 0으로 강제 고정 */
     .main .block-container {
-        padding: 0rem !important;
+        padding: 0px !important;
+        margin: 0px !important;
+        max-width: 100% !important;
     }
+
+    /* 3. 상단에 생기는 약 50px의 빈 공간 제거 */
+    .stApp {
+        margin-top: -50px;
+    }
+
+    /* 4. 아이프레임(index.html)을 화면에 꽉 채우기 */
     iframe {
         width: 100vw !important;
         height: 100vh !important;
+        border: none;
     }
     </style>
     """, unsafe_allow_html=True)
 
 # 3. HTML 출력
 try:
-    # 파일이 있는지 먼저 확인 (안전장치)
     if os.path.exists("index.html"):
         with open("index.html", "r", encoding="utf-8") as f:
             html_content = f.read()
         
-        # 높이를 100vh(화면 꽉 차게) 혹은 고정 숫자로 설정
+        # scrolling=False로 설정하면 브라우저 이중 스크롤을 막아 더 깔끔합니다.
         components.html(html_content, height=1200, scrolling=True)
     else:
-        st.error("index.html 파일을 찾을 수 없습니다. 파일 이름을 확인해 주세요.")
-
+        st.error("index.html 파일을 찾을 수 없습니다")
 except Exception as e:
-    st.error(f"에러 발생: {e}")
+    st.error(f"에러: {e}")
 
-# 4. 여기서 실행 중단 (아래의 Flask 코드 실행 방지)
 st.stop()
 
 # --- 이 아래로는 기존 소스가 있어도 상관없습니다 ---
