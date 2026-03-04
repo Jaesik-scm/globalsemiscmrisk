@@ -1,3 +1,17 @@
+import streamlit as st
+
+# 1. 웹 브라우저 탭 이름 설정
+st.set_page_config(page_title="SCM 리스크 대시보드", layout="wide")
+
+# 2. 화면에 제목 쓰기
+st.title("📡 글로벌 반도체 SCM 리스크 브리핑")
+st.markdown("---")
+
+# 3. 사이드바 만들기 (옵션)
+st.sidebar.header("설정")
+if st.sidebar.button("뉴스 즉시 업데이트"):
+    st.write("뉴스를 새로 가져오는 중...")
+    # 여기에 아까 보셨던 scheduled_fetch() 함수를 넣으면 작동합니다
 """
 semiconductor_scm_dashboard / backend / app.py
 Flask 웹 서버 — API + 프론트엔드 정적 서빙 + 스케줄러
