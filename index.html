@@ -15,8 +15,34 @@
   --t0:#e8f2ff;--t1:#8eb8d8;--t2:#4a6a88;
   --red:#ff3b5c;--amb:#f59e0b;--blu:#3b82f6;--cyn:#00d4ff;--grn:#10b981;--pur:#8b5cf6;
 }
-html,body{height:100%;overflow:hidden}
-body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--t0);font-size:14px;display:flex;flex-direction:column}
+
+/* 1. 화면 전체를 꽉 채우기 위한 설정 */
+html, body {
+    width: 100vw !important; 
+    height: 100vh !important; 
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family:'Noto Sans KR',sans-serif;
+    background:var(--bg);
+    color:var(--t0);
+    font-size:14px;
+    /* 2. 지도가 화면 전체를 차지하도록 레이아웃 해제 */
+    display: block; 
+}
+
+/* 3. 지도를 담고 있는 컨테이너 (이 부분이 핵심입니다) */
+#map, .map-container, #dashboard-main { 
+    width: 100% !important;
+    height: 100% !important;
+    position: absolute; /* 화면에 고정 */
+    top: 0;
+    left: 0;
+}
+</style>
 
 /* ══ TOPBAR ══ */
 .topbar{background:rgba(4,9,15,.98);backdrop-filter:blur(24px);border-bottom:1px solid var(--b0);padding:0 24px;height:54px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:100}
